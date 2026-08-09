@@ -1,8 +1,13 @@
-# AI Life Balance V13.2
+# AI Life Balance V13.4 — Cloudflare Worker
 
-- Frontend: HTML/CSS/JavaScript + PWA
-- AI: Cloudflare Pages Function `/api/gemini`
-- Secret: `GEMINI_API_KEY` on Cloudflare
-- User/judge never enters an API key.
+Architecture:
+- Frontend/PWA: `public/`
+- Cloudflare Worker: `worker.js`
+- Gemini proxy: `/api/gemini`
+- Secret: `GEMINI_API_KEY` in Cloudflare Worker secrets
 
-Deploy by connecting this repository to Cloudflare Pages via Git integration. Then add `GEMINI_API_KEY` under Variables and Secrets as an encrypted secret. Never commit the key to GitHub.
+Cloudflare Workers Build settings:
+- Build command: leave empty
+- Deploy command: `npx wrangler deploy`
+
+The Gemini API key must NOT be committed to GitHub or embedded in frontend JavaScript.

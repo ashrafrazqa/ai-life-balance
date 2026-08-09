@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Life Balance</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981" id="theme-color-meta">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI Life Balance">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- Fonts and Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main content area -->
+        <main id="view-container" class="view-container">
+            <!-- Views will be dynamically injected here -->
+        </main>
+
+        <!-- Bottom Navigation -->
+        
+<template id="tpl-settings">
+        <div class="view settings-view pb-safe">
+            <header class="top-header">
+                <div class="user-info">
+                    <h2>Pengaturan</h2>
+                    <p>Kelola profil dan koneksi Gemini AI.</p>
+                </div>
+            </header>
+
+            <div class="card settings-card">
+                <h3>Profil</h3>
+                <div class="form-grid">
+                    <label>
+                        Nama
+                        <input id="settings-name" type="text" autocomplete="name">
+                    </label>
+                    <label>
+                        Umur
+                        <input id="settings-age" type="number" min="1" max="120">
+                    </label>
+                    <label>
+                        Jenis Kelamin
+                        <select id="settings-gender">
+                            <option value="">Pilih</option>
+                            <option value="male">Pria</option>
+                            <option value="female">Wanita</option>
+                        </select>
+                    </label>
+                    <label>
+                        Tinggi Badan (cm)
+                        <input id="settings-height" type="number" min="50" max="250">
+                    </label>
+                    <label>
+                        Berat Badan (kg)
+                        <input id="settings-weight" type="number" min="10" max="300" step="0.1">
+                    </label>
+                    <label>
+                        Target Berat (kg)
+                        <input id="settings-target-weight" type="number" min="10" max="300" step="0.1">
+                    </label>
+                </div>
+            </div>
+
+            
+            <div class="card settings-card theme-card">
+                <div class="settings-section-title">
+                    <span class="material-symbols-rounded">palette</span>
+                    <div>
+                        <h3>Tampilan</h3>
+                        <p>Pilih tampilan yang paling nyaman untuk kamu.</p>
+                    </div>
+                </div>
+                <div class="theme-options" id="theme-selector" role="group" aria-label="Pilihan tampilan">
+                    <button type="button" class="theme-option" data-theme="light">
+                        <span class="material-symbols-rounded">light_mode</span>
+                        <span>Terang</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme="dark">
+                        <span class="material-symbols-rounded">dark_mode</span>
+                        <span>Gelap</span>
+                    </button>
+                </div>
+            </div>
+<div class="card settings-card ai-service-card">
+                <div class="settings-section-title">
+                    <span class="material-symbols-rounded">auto_awesome</span>
+                    <div>
+                        <h3>AI Engine</h3>
+                        <p class="settings-help">Layanan AI dikelola oleh aplikasi. Pengguna tidak perlu memasukkan API Key.</p>
+                    </div>
+                </div>
+                <div class="ai-service-status">
+                    <span class="status-dot"></span>
+                    <div>
+                        <strong>AI siap digunakan</strong>
+                        <small>Gemini API Key disimpan sebagai konfigurasi server dan tidak ditampilkan di perangkat pengguna.</small>
+                    </div>
+                </div>
+                <div id="settings-api-status" class="api-status" role="status" aria-live="polite"></div>
+            </div>
+            <div id="settings-about" class="card settings-card settings-about-card">
+                <div class="about-label">TENTANG APLIKASI</div>
+                <div class="settings-about-title">
+                    <div class="settings-about-icon">
+                        <span class="material-symbols-rounded">restaurant</span>
+                    </div>
+                    <div>
+                        <h3>AI Life Balance</h3>
+                        <p>Eat Better. Move Better. Live Better.</p>
+                    </div>
+                </div>
+                <div class="developer-credit">
+                    <span class="material-symbols-rounded">school</span>
+                    <div>
+                        <small>DEVELOPED BY</small>
+                        <strong>Ashraf Razqa Setiawardhana</strong>
+                        <span>SMA Muhammadiyah 3 Jakarta • Class X-5</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </template>
+
+<template id="tpl-about">
+        <div class="view about-view pb-safe">
+            <div class="about-hero">
+                <div class="about-logo"><span class="material-symbols-rounded">restaurant</span></div>
+                <div class="about-kicker">AI FOR EVERYDAY LIFE</div>
+                <h1>AI Life Balance</h1>
+                <p class="about-tagline">Eat Better. Move Better. Live Better.</p>
+            </div>
+            <div class="about-card">
+                <div class="about-label">DEVELOPED BY</div>
+                <h2>Ashraf Razqa Setiawardhana</h2>
+                <div class="about-school">
+                    <span class="material-symbols-rounded">school</span>
+                    <div><strong>SMA Muhammadiyah 3 Jakarta</strong><span>Class X-5</span></div>
+                </div>
+            </div>
+            <div class="about-card about-project">
+                <div class="about-label">ABOUT THIS PROJECT</div>
+                <p>AI Life Balance adalah asisten kesehatan berbasis Artificial Intelligence yang membantu pengguna memahami hubungan antara makanan, aktivitas, kebutuhan energi, dan tujuan berat badan agar dapat membuat pilihan yang lebih baik setiap hari.</p>
+            </div>
+            <div class="about-footer"><span>AI • Food • Activity • Balance</span><small>© 2026 AI Life Balance</small></div>
+        </div>
+    </template>
+
+<nav class="bottom-nav" id="bottom-nav" style="display: none;"><a href="#dashboard" class="nav-item active" data-target="dashboard">
+                <span class="material-symbols-rounded">dashboard</span>
+                <span>Beranda</span>
+            </a>
+<a href="#food" class="nav-item" data-target="food" aria-label="Makanan">
+                <span class="material-symbols-rounded">restaurant_menu</span>
+                <span>Makanan</span>
+            </a>
+<a href="#activity" class="nav-item" data-target="activity">
+                <span class="material-symbols-rounded">fitness_center</span>
+                <span>Aktivitas</span>
+            </a>
+<a href="#scan" class="nav-item nav-scan" data-target="scan" aria-label="Scan">
+                <span class="scan-icon"><span class="material-symbols-rounded">photo_camera</span></span>
+                <span class="scan-label">SCAN</span>
+            </a>
+<a href="#coach" class="nav-item" data-target="coach">
+                <span class="material-symbols-rounded">smart_toy</span>
+                <span>Coach</span>
+            </a>
+<a href="#settings" class="nav-item" data-target="settings" aria-label="Pengaturan">
+            <span class="material-symbols-rounded">settings</span>
+            <span>Pengaturan</span>
+        </a>
+<a href="#about" class="nav-item" data-target="about" aria-label="Tentang">
+                <span class="material-symbols-rounded">auto_awesome</span>
+                <span>Tentang</span>
+            </a></nav>
+    </div>
+
+    <!-- Templates for different views -->
+    
+    <!-- 1. Onboarding / Profile View -->
+    <template id="tpl-onboarding">
+        <div class="view onboarding-view">
+            <div class="header-glass">
+                <h1>Selamat Datang</h1>
+                <p>Kenali tubuhmu, tetapkan tujuan, dan biarkan AI membantu menjaga keseimbangan harianmu.</p>
+            </div>
+            
+            <form id="profile-form" class="card form-card">
+                
+                <button type="submit" class="btn-primary mt-2">Mulai Sekarang</button>
+            </form>
+        </div>
+    </template>
+
+    <!-- 2. Dashboard View -->
+    <template id="tpl-dashboard">
+        <div class="view dashboard-view pb-safe">
+            <header class="top-header">
+                <div class="user-info">
+                    <h2>Halo, <span id="dash-name">Pengguna</span></h2>
+                    <p>Semangat sehat hari ini!</p>
+                </div>
+                <div class="health-score">
+                    <svg viewBox="0 0 36 36" class="circular-chart green">
+                        <path class="circle-bg"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path class="circle"
+                            stroke-dasharray="0, 100"
+                            id="score-circle"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <text x="18" y="20.35" class="percentage" id="dash-score">—</text>
+                    </svg>
+                    <small>Balance Score</small><span id="balance-score-note" class="score-note">Indikator keseimbangan harian</span>
+                </div>
+            </header>
+
+            <section class="card summary-card glass-card">
+                <h3>Energy Balance Hari Ini</h3>
+                <div class="cal-display">
+                    <div class="cal-item">
+                        <span class="material-symbols-rounded">restaurant</span>
+                        <div class="cal-val" id="dash-cal-in">0</div>
+                        <small>Masuk</small>
+                    </div>
+                    <div class="cal-main">
+                        <div class="cal-circle">
+                            <span id="dash-cal-left" class="main-val">2000</span>
+                            <small>Sisa Target</small>
+                        </div>
+                    </div>
+                    <div class="cal-item">
+                        <span class="material-symbols-rounded">local_fire_department</span>
+                        <div class="cal-val" id="dash-cal-out">0</div>
+                        <small>Terbakar</small>
+                    </div>
+                </div>
+                
+                <div class="macros mt-4">
+                    <div class="macro-item">
+                        <span>Protein</span>
+                        <div class="progress-bar"><div id="bar-p" class="fill bg-blue" style="width: 0%"></div></div>
+                        <small id="txt-p">0g</small>
+                    </div>
+                    <div class="macro-item">
+                        <span>Karbo</span>
+                        <div class="progress-bar"><div id="bar-c" class="fill bg-green" style="width: 0%"></div></div>
+                        <small id="txt-c">0g</small>
+                    </div>
+                    <div class="macro-item">
+                        <span>Lemak</span>
+                        <div class="progress-bar"><div id="bar-f" class="fill bg-orange" style="width: 0%"></div></div>
+                        <small id="txt-f">0g</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card ai-insight-card">
+                <div class="card-header">
+                    <span class="material-symbols-rounded icon-sparkle">auto_awesome</span>
+                    <h3>AI Insight</h3>
+                    <span class="ai-live-badge">AI</span><button id="btn-refresh-insight" class="insight-refresh" type="button" title="Perbarui insight"><span class="material-symbols-rounded">refresh</span> Perbarui</button>
+                </div>
+                <p id="dash-insight">AI sedang membaca data hari ini...</p>
+            </section>
+
+            <section class="card education-card">
+                <div class="card-header">
+                    <span class="material-symbols-rounded">lightbulb</span>
+                    <h3>💡 Bagaimana Berat Badan Bekerja?</h3>
+                </div>
+                <p>Bayangkan tubuh seperti rekening energi. Makanan dan minuman adalah <strong>kalori masuk</strong>, sedangkan metabolisme dan aktivitas adalah <strong>kalori keluar</strong>.</p>
+                <div class="balance-equation">
+                    <span>🍽️ Calories In</span><b>−</b><span>🔥 Calories Out</span><b>=</b><strong>⚖️ Energy Balance</strong>
+                </div>
+                <div class="kg-example">
+                    <strong>🎯 Contoh sederhana: target turun 1 kg</strong>
+                    <p>Secara sederhana, sekitar <b>7.700 kkal</b> defisit energi sering digunakan sebagai perkiraan untuk kehilangan 1 kg berat badan. Contoh 30 hari: 7.700 ÷ 30 ≈ <b>257 kkal/hari</b>.</p>
+                    <small>Ini adalah estimasi edukasi, bukan jaminan hasil. Berat badan juga dipengaruhi air, massa otot, metabolisme, dan faktor lainnya.</small>
+                </div>
+            </section>
+
+            <section class="card progress-chart-card mb-4">
+                <div class="card-header">
+                    <span class="material-symbols-rounded">monitoring</span>
+                    <h3>Progress 7 Hari</h3>
+                </div>
+                <p class="text-sm">Ringkasan kalori masuk, aktivitas, dan keseimbangan energi harian.</p>
+                <div id="progress-chart" class="progress-chart" aria-label="Grafik progress 7 hari"></div>
+                <div class="chart-legend"><span><i class="legend-in"></i>Kalori Masuk</span><span><i class="legend-out"></i>Aktivitas</span></div>
+            </section>
+
+            <section class="card progress-card mb-4">
+                <h3>Progress Berat Badan</h3>
+                <div class="weight-track">
+                    <div class="w-current">
+                        <small>Saat Ini</small>
+                        <strong id="dash-w-current">70 kg</strong>
+                    </div>
+                    <div class="material-symbols-rounded arrow">trending_flat</div>
+                    <div class="w-target">
+                        <small>Target</small>
+                        <strong id="dash-w-target">65 kg</strong>
+                    </div>
+                </div>
+                <p class="prediction">Prediksi target tercapai: <strong class="text-primary" id="dash-prediction">-</strong></p>
+            </section>
+        </div>
+    </template>
+    
+    <!-- 3. Food / Meal Planner View -->
+    <template id="tpl-food">
+        <div class="view food-view pb-safe">
+            <header class="top-header">
+                <h2>Catatan Makanan</h2>
+            </header>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="diary">Hari Ini</button>
+                <button class="tab-btn" data-tab="history">Riwayat</button>
+                <button class="tab-btn" data-tab="planner">AI Planner</button>
+            </div>
+            
+            <div id="tab-diary" class="tab-content active">
+                <div class="food-list" id="food-list">
+                    <p class="empty-state">Belum ada makanan yang dicatat hari ini.</p>
+                </div>
+            </div>
+            <div id="tab-history" class="tab-content" style="display:none;">
+                <div class="history-summary" id="food-history-summary"></div>
+                <div class="history-list" id="food-history-list"></div>
+            </div>
+            
+            <div id="tab-planner" class="tab-content" style="display:none;">
+                <div class="card glass-card">
+                    <div class="card-header">
+                        <span class="material-symbols-rounded icon-sparkle">auto_awesome</span>
+                        <h3>Smart Meal Plan</h3>
+                    </div>
+                    <p class="text-sm mb-4">Rekomendasi menu hari ini untuk mencapai target kalori.</p>
+                    
+                    <div class="meal-plan" id="meal-plan-container">
+                        <!-- AI Meal plan generated here -->
+                    </div>
+                </div>
+                <div class="card glass-card mt-4">
+                    <div class="card-header">
+                        <span class="material-symbols-rounded">kitchen</span>
+                        <h3>Smart Pantry</h3>
+                    </div>
+                    <p class="text-sm mb-2">Punya bahan sisa? Masukkan ke sini agar AI buatkan menu.</p>
+                    <div class="input-group">
+                        <input type="text" id="pantry-input" placeholder="Cth: telur, ayam, tahu">
+                        <button class="btn-secondary mt-2" id="btn-pantry">Buat Menu</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 4. Scanner View -->
+    <template id="tpl-scan">
+        <div class="view scan-view pb-safe">
+            <header class="top-header page-header-stacked">
+                <h2>Scan Makanan</h2>
+                <p>Ambil foto makanan dan biarkan AI membantu memperkirakan nutrisinya.</p>
+            </header>
+            
+            <div class="scanner-container card">
+                <div class="camera-wrapper" id="camera-wrapper">
+                    <video id="camera-stream" autoplay playsinline></video>
+                    <canvas id="camera-canvas" style="display:none;"></canvas>
+                    <div class="camera-overlay">
+                        <div class="capture-btn-container">
+                            <button id="btn-capture" class="btn-capture"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="camera-error" id="camera-error" style="display:none; text-align:center; padding:2rem 0;">
+                    <span class="material-symbols-rounded text-primary" style="font-size:3rem;">no_photography</span>
+                    <p class="mt-2 text-sm">Akses kamera tidak diizinkan atau tidak tersedia.</p>
+                </div>
+                
+                <div class="scan-result" id="scan-result" style="display:none;">
+                    <div class="scan-loading" id="scan-loading">
+                        <span class="material-symbols-rounded spin">sync</span>
+                        <p>AI sedang menganalisis...</p>
+                    </div>
+                    <div class="scan-details" id="scan-details" style="display:none;">
+                        <input type="text" id="res-food-name" class="editable-title" value="Mengenali...">
+                        <div class="res-cal">
+                            <input type="number" id="res-food-cal" class="editable-num" value="0"> Kkal
+                        </div>
+                        <div class="res-macros mt-2">
+                            <span><input type="number" id="res-p" class="editable-sm" value="0">g Protein</span>
+                            <span><input type="number" id="res-c" class="editable-sm" value="0">g Karbo</span>
+                            <span><input type="number" id="res-f" class="editable-sm" value="0">g Lemak</span>
+                        </div>
+                        <button class="btn-primary w-100 mt-4" id="btn-save-food">Simpan ke Diary</button>
+                        <button class="btn-text w-100 mt-2" id="btn-cancel-food">Batal</button>
+                    </div>
+                </div>
+                
+                <div class="manual-entry mt-4 text-center">
+                    <p class="text-sm">Atau ketik manual (Contoh: "1 mangkok soto ayam"):</p>
+                    <div class="input-group">
+                        <input type="text" id="manual-food-input" placeholder="Apa yang kamu makan?">
+                        <button class="btn-secondary mt-2" id="btn-manual-food">Analisis dengan AI</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 5. Activity View -->
+    <template id="tpl-activity">
+        <div class="view activity-view pb-safe">
+            <header class="top-header">
+                <h2>Aktivitas Hari Ini</h2>
+            </header>
+            
+            <div class="card glass-card">
+                <div class="card-header">
+                    <span class="material-symbols-rounded icon-sparkle">auto_awesome</span>
+                    <h3>Catat dengan AI</h3>
+                </div>
+                <p class="text-sm mb-2">Ketik aktivitas dan durasinya, misalnya “jalan cepat 45 menit”. AI akan memperkirakan kalori yang terbakar.</p>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="act-input" placeholder="Cth: Hari ini saya lari 30 menit">
+                    <button id="btn-save-act" class="btn-icon"><span class="material-symbols-rounded">send</span></button>
+                </div>
+            </div>
+            
+            <div class="tabs activity-tabs mt-4">
+                <button class="tab-btn active" data-activity-tab="today">Hari Ini</button>
+                <button class="tab-btn" data-activity-tab="history">Riwayat</button>
+            </div>
+            <div id="activity-today-panel">
+                <h3 class="mt-2 mb-2">Aktivitas Hari Ini</h3>
+                <div class="activity-list" id="activity-list">
+                    <p class="empty-state">Belum ada aktivitas.</p>
+                </div>
+            </div>
+            <div id="activity-history-panel" style="display:none;">
+                <div class="history-summary" id="activity-history-summary"></div>
+                <div class="history-list" id="activity-history-list"></div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 6. AI Coach View -->
+    <template id="tpl-coach">
+        <div class="view coach-view pb-safe">
+            <header class="top-header coach-header">
+                <div class="coach-avatar">
+                    <span class="material-symbols-rounded">smart_toy</span>
+                </div>
+                <div>
+                    <h2>AI Life Coach</h2>
+                    <p>Tanya tentang makanan, aktivitas, target, atau keseimbangan harianmu</p>
+                </div>
+                <button id="btn-clear-chat" class="btn-text" style="margin-left:auto; color:var(--text-muted); font-size:0.8rem; display:flex; align-items:center; gap:4px;" title="Hapus Riwayat Chat">
+                    <span class="material-symbols-rounded" style="font-size:1.2rem;">delete_sweep</span>
+                </button>
+            </header>
+            
+            <div class="chat-container" id="chat-container">
+                <div class="chat-msg coach-msg">
+                    <div class="msg-bubble">Halo! Saya adalah AI Coach personal kamu. Ada yang ingin ditanyakan atau butuh motivasi hari ini?</div>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Tanya sesuatu (Contoh: Apa menu siang yang cocok?)...">
+                <button id="btn-send-chat" class="btn-icon btn-primary"><span class="material-symbols-rounded">send</span></button>
+            </div>
+        </div>
+    </template>
+
+    <div id="app-alert" class="app-alert" role="dialog" aria-live="polite" aria-modal="true" style="display:none;">
+        <div class="app-alert-card">
+            <div class="app-alert-icon" id="app-alert-icon"><span class="material-symbols-rounded">info</span></div>
+            <div class="app-alert-body"><h3 id="app-alert-title">Pengingat</h3><p id="app-alert-message"></p></div>
+            <button id="app-alert-close" class="app-alert-close" type="button" aria-label="Tutup"><span class="material-symbols-rounded">close</span></button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
