@@ -299,24 +299,79 @@ function initView(viewName) {
 
 function initOnboarding() {
     const form = document.getElementById('profile-form');
+
+    if (!form) return;
+
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const profile = {
-            name: document.getElementById('prof-name').value.trim(),
-            age: Number(document.getElementById('prof-age').value),
-            gender: document.getElementById('prof-gender').value,
-            height: Number(document.getElementById('prof-height').value),
-            weight: Number(document.getElementById('prof-weight').value),
-            targetWeight: Number(document.getElementById('prof-target').value),
-            goal: document.getElementById('prof-goal').value,
-            activity: document.getElementById('prof-activity').value
-        };
-        const stats = calculateHealthStats(profile);
-        state.profile = { ...profile, ...stats };
-        if (!state.weightHistory.length || state.weightHistory[state.weightHistory.length - 1].weight !== profile.weight) {
-            state.weightHistory.push({ date: getTodayString(), weight: profile.weight });
+
+        const name = document.getElementById('prof-name')?.value.trim();
+        const age = Number(document.getElementById('prof-age')?.value);
+        const gender = document.getElementById('prof-gender')?.value;
+        const height = Number(document.getElementById('prof-height')?.value);
+        const weight = Number(document.getElementById('prof-weight')?.value);
+        const targetWeight = Number(document.getElementById('prof-target')?.value);
+        const goal = document.getElementById('prof-goal')?.value;
+        const activity = document.getElementById('prof-activity')?.value;
+
+        if (!name || !age || !gender || !height || !weight || !targetWeight || !goal || !activity) {
+            showAppAlert(
+                'warning',
+                'Data belum lengkap',
+                'Lengkapi semua data profil terlebih dahulu.'
+            );
+            return;
         }
+
+        if (targetWeight <= 0 || weight <= 0 || height <= 0 || age <= 0) {
+            showAppAlert(
+                'warning',
+                'Data tidak valid',
+                'Pastikan umur, tinggi, berat badan, dan target berat sudah benar.'
+            );
+            return;
+        }
+
+        if (goal === 'lose' && targetWeight >= weight) {
+            showAppAlert(
+                'warning',
+                'Target berat belum sesuai',
+                'Untuk tujuan menurunkan berat badan, target berat harus lebih rendah dari berat saat ini.'
+            );
+            return;
+        }
+
+        const profile = {
+            name,
+            age,
+            gender,
+            height,
+            weight,
+            targetWeight,
+            goal,
+            activity
+        };
+
+        const stats = calculateHealthStats(profile);
+
+        state.profile = {
+            ...profile,
+            ...stats
+        };
+
+        if (
+            !state.weightHistory.length ||
+            state.weightHistory[state.weightHistory.length - 1].weight !== profile.weight
+        ) {
+            state.weightHistory.push({
+                date: getTodayString(),
+                weight: profile.weight
+            });
+        }
+
         saveState();
+
+        // Masuk ke Beranda setelah profil berhasil disimpan
         window.location.hash = '#dashboard';
     });
 }
