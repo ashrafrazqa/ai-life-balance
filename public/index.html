@@ -189,20 +189,139 @@
 
     <!-- Templates for different views -->
     
-    <!-- 1. Onboarding / Profile View -->
-    <template id="tpl-onboarding">
-        <div class="view onboarding-view">
-            <div class="header-glass">
-                <h1>Selamat Datang</h1>
-                <p>Kenali tubuhmu, tetapkan tujuan, dan biarkan AI membantu menjaga keseimbangan harianmu.</p>
-            </div>
-            
-            <form id="profile-form" class="card form-card">
-                
-                <button type="submit" class="btn-primary mt-2">Mulai Sekarang</button>
-            </form>
+<template id="tpl-onboarding">
+    <div class="view onboarding-view pb-safe">
+        <div class="header-glass">
+            <span class="material-symbols-rounded" style="font-size:2rem;">favorite</span>
+            <h1>Selamat Datang</h1>
+            <p>
+                Kenali tubuhmu, tetapkan tujuan, dan biarkan AI membantu
+                menjaga keseimbangan harianmu.
+            </p>
         </div>
-    </template>
+
+        <form id="profile-form" class="card form-card">
+
+            <div class="card-header">
+                <span class="material-symbols-rounded">person</span>
+                <h3>Profil Kamu</h3>
+            </div>
+
+            <p class="text-sm mb-4">
+                Isi data dasar agar AI Life Balance dapat menghitung
+                kebutuhan energi dan target harianmu.
+            </p>
+
+            <div class="form-grid">
+
+                <label>
+                    Nama
+                    <input
+                        id="prof-name"
+                        type="text"
+                        placeholder="Contoh: Ashraf"
+                        autocomplete="name"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Umur
+                    <input
+                        id="prof-age"
+                        type="number"
+                        min="10"
+                        max="120"
+                        placeholder="Contoh: 15"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Jenis Kelamin
+                    <select id="prof-gender" required>
+                        <option value="">Pilih</option>
+                        <option value="male">Pria</option>
+                        <option value="female">Wanita</option>
+                    </select>
+                </label>
+
+                <label>
+                    Tinggi Badan (cm)
+                    <input
+                        id="prof-height"
+                        type="number"
+                        min="50"
+                        max="250"
+                        placeholder="Contoh: 170"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Berat Badan (kg)
+                    <input
+                        id="prof-weight"
+                        type="number"
+                        min="10"
+                        max="300"
+                        step="0.1"
+                        placeholder="Contoh: 63"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Target Berat (kg)
+                    <input
+                        id="prof-target"
+                        type="number"
+                        min="10"
+                        max="300"
+                        step="0.1"
+                        placeholder="Contoh: 60"
+                        required
+                    >
+                </label>
+
+            </div>
+
+            <label class="mt-4">
+                Tujuan Utama
+                <select id="prof-goal" required>
+                    <option value="lose">Menurunkan berat badan</option>
+                    <option value="maintain">Mempertahankan berat badan</option>
+                    <option value="fitness">Meningkatkan kebugaran</option>
+                </select>
+            </label>
+
+            <label class="mt-4">
+                Aktivitas Harian
+                <select id="prof-activity" required>
+                    <option value="1.2">Jarang — lebih banyak duduk</option>
+                    <option value="1.375">Ringan — aktivitas ringan 1–3 hari/minggu</option>
+                    <option value="1.55">Sedang — olahraga 3–5 hari/minggu</option>
+                    <option value="1.725">Tinggi — aktivitas berat 6–7 hari/minggu</option>
+                    <option value="1.9">Sangat tinggi — aktivitas fisik sangat berat</option>
+                </select>
+            </label>
+
+            <div class="onboarding-note mt-4">
+                <span class="material-symbols-rounded">auto_awesome</span>
+                <p>
+                    Data ini digunakan untuk memperkirakan kebutuhan energi,
+                    bukan sebagai diagnosis medis.
+                </p>
+            </div>
+
+            <button type="submit" class="btn-primary w-100 mt-4">
+                <span class="material-symbols-rounded">arrow_forward</span>
+                Mulai Sekarang
+            </button>
+
+        </form>
+    </div>
+</template>
 
     <!-- 2. Dashboard View -->
     <template id="tpl-dashboard">
