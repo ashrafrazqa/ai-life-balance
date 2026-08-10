@@ -1,4 +1,4 @@
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
 
 // Status yang memungkinkan Worker mencoba API Key berikutnya.
@@ -46,8 +46,6 @@ function extractGeminiError(text, status) {
 
   const geminiError = data?.error;
 
-  // Jika Gemini mengembalikan:
-  // { error: { message: "...", status: "...", code: 429 } }
   if (geminiError && typeof geminiError === "object") {
     if (geminiError.message) {
       return geminiError.message;
@@ -58,12 +56,10 @@ function extractGeminiError(text, status) {
     }
   }
 
-  // Jika error berupa string
   if (typeof geminiError === "string") {
     return geminiError;
   }
 
-  // Response text biasa
   if (text && typeof text === "string") {
     return text.slice(0, 500);
   }
@@ -72,15 +68,24 @@ function extractGeminiError(text, status) {
 }
 
 /**
- * Pesan yang lebih ramah untuk pengguna.
+ * Mengubah error teknis menjadi pesan yang
+ * lebih ramah untuk pengguna.
  */
 function getFriendlyError(status, originalMessage = "") {
-  if (status === 429) {
-    return "Layanan AI sedang sibuk atau kuota sementara tercapai. Silakan coba lagi beberapa saat.";
+  if (status === 400) {
+    return originalMessage || "Permintaan AI tidak valid.";
   }
 
   if (status === 401 || status === 403) {
-    return "Layanan AI sedang mengalami kendala konfigurasi. Silakan coba lagi nanti.";
+    return "Layanan AI mengalami kendala konfigurasi atau akses. Silakan coba lagi nanti.";
+  }
+
+  if (status === 404) {
+    return "Model AI yang digunakan tidak tersedia. Silakan periksa konfigurasi model Gemini.";
+  }
+
+  if (status === 429) {
+    return "Layanan AI sedang sibuk atau kuota sementara tercapai. Silakan coba lagi beberapa saat.";
   }
 
   if (status >= 500) {
@@ -139,13 +144,15 @@ export default {
       }
 
       // ------------------------------------------
-      // Ambil kedua Secret
+      // Ambil kedua Secret API Key
       // ------------------------------------------
       const apiKeys = [
         env.GEMINI_API_KEY_1,
         env.GEMINI_API_KEY_2
       ].filter(
-        key => typeof key === "string" && key.trim().length > 0
+        key =>
+          typeof key === "string" &&
+          key.trim().length > 0
       );
 
       if (apiKeys.length === 0) {
@@ -224,6 +231,7 @@ export default {
       // ==========================================
 
       let lastStatus = 502;
+
       let lastMessage =
         "Tidak dapat terhubung ke layanan Gemini.";
 
@@ -232,6 +240,7 @@ export default {
         const apiKey = apiKeys[i];
 
         try {
+
           const upstream = await callGemini(
             apiKey,
             payload
@@ -257,21 +266,24 @@ export default {
           // ----------------------------------------
           // GAGAL
           // ----------------------------------------
+
           lastStatus = upstream.status;
 
-          const rawError = extractGeminiError(
-            text,
-            upstream.status
-          );
+          const rawError =
+            extractGeminiError(
+              text,
+              upstream.status
+            );
 
-          lastMessage = getFriendlyError(
-            upstream.status,
-            rawError
-          );
+          lastMessage =
+            getFriendlyError(
+              upstream.status,
+              rawError
+            );
 
           // ----------------------------------------
-          // Jika error bisa di-fallback,
-          // lanjut ke API Key berikutnya.
+          // Jika error memungkinkan failover,
+          // coba API Key berikutnya.
           // ----------------------------------------
           if (
             RETRYABLE_STATUS.has(
@@ -283,20 +295,13 @@ export default {
           }
 
           // ----------------------------------------
-          // Tidak ada key lagi / error bukan
-          // error yang perlu fallback.
-          //
-          // Penting:
-          // error dikembalikan sebagai STRING,
-          // bukan object.
-          //
-          // Ini memperbaiki:
-          // "Maaf, terjadi kesalahan: [object Object]"
+          // Tidak ada key lagi
           // ----------------------------------------
           return jsonResponse(
             {
               error: lastMessage,
-              code: upstream.status
+              code: upstream.status,
+              model: GEMINI_MODEL
             },
             upstream.status >= 500
               ? 503
@@ -308,13 +313,16 @@ export default {
           // ----------------------------------------
           // Network / fetch error
           // ----------------------------------------
+
           lastStatus = 502;
+
           lastMessage =
             "Tidak dapat terhubung ke layanan Gemini.";
 
-          // Kalau masih ada API Key berikutnya,
-          // coba key berikutnya.
-          if (i < apiKeys.length - 1) {
+          // Coba API Key berikutnya
+          if (
+            i < apiKeys.length - 1
+          ) {
             continue;
           }
 
@@ -331,6 +339,7 @@ export default {
       // ==========================================
       // Semua API Key gagal
       // ==========================================
+
       return jsonResponse(
         {
           error: lastMessage,
@@ -343,6 +352,7 @@ export default {
     // ==========================================
     // STATIC / PWA ASSETS
     // ==========================================
+
     return env.ASSETS.fetch(request);
   }
 };
