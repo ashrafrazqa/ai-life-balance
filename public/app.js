@@ -174,24 +174,28 @@ function maybeShowDailyAlert(summary) {
 }
 
 function renderProgressChart() {
-    const el = document.getElementById('progress-chart');
+    const el = document.getElementById('dashboard-progress-chart') || document.getElementById('progress-chart');
     if (!el || !state.profile) return;
     const days = [];
     const now = new Date();
+    const demoFood=[1780,1650,1900,1720,1810,1690,1760], demoAct=[180,320,120,260,350,220,300];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(now); d.setDate(now.getDate() - i);
         const date = d.toISOString().split('T')[0];
-        const food = state.diary.filter(x => x.date === date).reduce((s,x)=>s+Number(x.cal||0),0);
-        const act = state.activities.filter(x => x.date === date).reduce((s,x)=>s+Number(x.cal||0),0);
+        const index = 6 - i;
+        const food = state.demoMode ? demoFood[index] : state.diary.filter(x => x.date === date && !x.demo).reduce((s,x)=>s+Number(x.cal||0),0);
+        const act = state.demoMode ? demoAct[index] : state.activities.filter(x => x.date === date && !x.demo).reduce((s,x)=>s+Number(x.cal||0),0);
         days.push({date, food, act, label:d.toLocaleDateString('id-ID',{weekday:'short'}).replace('.','')});
     }
     const max = Math.max(state.profile.targetCalorie || 1, ...days.flatMap(x=>[x.food,x.act]), 1);
-    el.innerHTML = days.map(x => {
-        const inH = x.food ? Math.max(6, Math.round((x.food/max)*100)) : 2;
-        const outH = x.act ? Math.max(6, Math.round((x.act/max)*100)) : 2;
-        const balance = x.food - x.act;
-        return `<div class="chart-day" title="${x.date}: ${x.food} masuk, ${x.act} aktivitas, balance ${balance} kkal"><div class="chart-bars"><span class="bar-in" style="height:${inH}%"></span><span class="bar-out" style="height:${outH}%"></span></div><small>${x.label}</small></div>`;
-    }).join('');
+    const W=560,H=155,left=42,right=12,top=18,bottom=28,plotW=W-left-right,plotH=H-top-bottom;
+    const x=i=>days.length===1?left+plotW/2:left+(i/(days.length-1))*plotW;
+    const y=v=>top+((max-v)/max)*plotH;
+    const points=(key)=>days.map((d,i)=>`${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(' ');
+    const grid=[0,.5,1].map(t=>{const yy=top+t*plotH;const val=max*(1-t);return `<line x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}" class="dash-grid-line"/><text x="${left-7}" y="${yy+4}" text-anchor="end" class="dash-axis-label">${Math.round(val)}</text>`;}).join('');
+    const labels=days.map((d,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="dash-date-label">${d.label}</text>`).join('');
+    const dots=(key,cls)=>days.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d[key])}" r="${i===days.length-1?5:3.5}" class="${cls}${i===days.length-1?' current':''}"><title>${formatDateId(d.date)}: ${d[key].toLocaleString('id-ID')} kkal</title></circle>`).join('');
+    el.innerHTML=`<div class="dashboard-line-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik makanan dan aktivitas 7 hari">${grid}<polyline points="${points('food')}" class="dash-line dash-line-in"/><polyline points="${points('act')}" class="dash-line dash-line-out"/>${dots('food','dash-dot-in')}${dots('act','dash-dot-out')}${labels}</svg></div>`;
 }
 
 function getTodaySummary() {
@@ -223,7 +227,7 @@ function stopCamera() {
 
 // AI service: the Gemini API Key is kept server-side.
 // Production endpoint: Cloudflare Worker at /api/gemini.
-const AI_API_ENDPOINT = '/api/gemini';
+const AI_API_ENDPOINT = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'https://ai-life-balance-test.dny-setia.workers.dev/api/gemini' : '/api/gemini';
 
 async function callGeminiAPI(payload) {
     let response, result;
@@ -374,6 +378,22 @@ function initOnboarding() {
         // Masuk ke Beranda setelah profil berhasil disimpan
         window.location.hash = '#dashboard';
     });
+}
+
+
+function renderWeightHistoryChart() {
+    const el=document.getElementById('weight-history-chart'); if(!el||!state.weightHistory?.length)return;
+    const data=state.weightHistory.slice(-10); const min=Math.min(...data.map(x=>Number(x.weight))), max=Math.max(...data.map(x=>Number(x.weight))); const range=Math.max(0.5,max-min);
+    el.innerHTML=data.map((x,i)=>{const pct=20+((Number(x.weight)-min)/range)*70;return `<div class="weight-point" title="${formatDateId(x.date)}: ${x.weight} kg"><span style="bottom:${pct}%"></span><small>${new Date(x.date+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'})}</small></div>`}).join('');
+}
+function addDemoJourney() {
+    if (!state.profile) return;
+    state.demoMode = !state.demoMode;
+    const btn=document.getElementById('btn-demo-progress');
+    const note=document.getElementById('demo-progress-note');
+    if(btn) btn.innerHTML=state.demoMode ? '<span class="material-symbols-rounded">undo</span> Kembali ke Progress Saya' : '<span class="material-symbols-rounded">auto_graph</span> Lihat Contoh Perjalanan';
+    if(note) note.style.display=state.demoMode ? 'block' : 'none';
+    const story=document.getElementById('progress-journey-story'); if(story) story.textContent=state.demoMode?'Contoh cerita: perjalanan pengguna menunjukkan perubahan kebiasaan dan perbandingan target dengan kondisi aktual. Data ini hanya simulasi untuk demo.':`Saat ini kamu berada di ${state.profile.weight} kg dengan target ${state.profile.targetWeight} kg. Check-in secara berkala agar perjalanan nyata bisa dibandingkan dengan prediksi.`;
 }
 
 async function initDashboard() {
@@ -546,7 +566,7 @@ function initFood() {
     }
 
     renderFoodHistory();
-    document.querySelectorAll('#tpl-food .tab-btn').forEach(btn => {
+    document.querySelectorAll('.food-view .tab-btn').forEach(btn => {
         btn.addEventListener('click', () => { if (btn.dataset.tab === 'history') renderFoodHistory(); });
     });
 }
@@ -574,8 +594,8 @@ async function loadMealPlanner() {
 
     const pantryInput = document.getElementById('pantry-input');
     pantryInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-pantry').click(); } });
-    document.getElementById('btn-pantry')?.addEventListener('click', async () => {
-        const input=pantryInput?.value.trim(); if(!input) return;
+    document.getElementById('btn-pantry')?.addEventListener('click', async (event) => { event.preventDefault();
+        const input=pantryInput?.value.trim(); if(!input){showAppAlert('warning','Bahan belum diisi','Ketik minimal satu bahan makanan terlebih dahulu sebelum memilih Buat Menu.');pantryInput?.focus();return;}
         const btn=document.getElementById('btn-pantry'); btn.disabled=true; btn.textContent='Menyusun...';
         try {
             const prompt=`Saya punya bahan makanan: ${input}. Buat 1 menu sehat yang cocok untuk tujuan ${getGoalLabel(state.profile.goal)} dengan target harian ${target} kkal. Kembalikan JSON murni {"name":"","cal":0,"detail":""}. Jangan markdown.`;
@@ -789,7 +809,7 @@ function initActivity() {
     document.getElementById('btn-save-act').addEventListener('click', async () => {
         const inputEl = document.getElementById('act-input');
         const input = inputEl.value.trim();
-        if (!input) return;
+        if (!input) { showAppAlert('warning','Aktivitas belum diisi','Ketik aktivitas dan durasinya terlebih dahulu sebelum dianalisis.'); inputEl.focus(); return; }
 
         const localEstimate = estimateActivityCalories(input, state.profile.weight);
         const button = document.getElementById('btn-save-act');
@@ -974,6 +994,7 @@ function initSettings() {
 
             saveState();
             setApiStatus('Pengaturan berhasil disimpan.', true);
+            showAppAlert('success','Pengaturan diperbarui','Data profil dan target harianmu berhasil disimpan.');
         });
     }
 
@@ -1014,3 +1035,274 @@ function initAbout() {}
     document.addEventListener('DOMContentLoaded', updateThemeButtons);
     updateThemeButtons();
 })();
+
+
+/* =========================================================
+   MASTER UPDATE — AI LIFE BALANCE LOCAL CANDIDATE
+   ========================================================= */
+const MASTER_LOCAL_WORKER = 'https://ai-life-balance-test.dny-setia.workers.dev/api/gemini';
+const AI_API_ENDPOINT_MASTER = (window.AI_API_ENDPOINT ||
+    ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? MASTER_LOCAL_WORKER : '/api/gemini'));
+
+async function callGeminiAPI(payload) {
+    let response;
+    try {
+        response = await fetch(AI_API_ENDPOINT_MASTER, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        throw new Error(`Tidak dapat terhubung ke layanan AI. Periksa koneksi internet. Detail: ${e.message}`);
+    }
+    let result;
+    try { result = await response.json(); }
+    catch { throw new Error(`Layanan AI mengembalikan respons tidak valid (HTTP ${response.status}).`); }
+    if (!response.ok) throw new Error(result?.error || `Layanan AI gagal (HTTP ${response.status}).`);
+    return result;
+}
+
+function parseAIJson(text) {
+    const raw = String(text || '').trim();
+    const cleaned = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();
+    try { return JSON.parse(cleaned); } catch (_) {}
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Format respons AI bukan JSON yang valid.');
+    return JSON.parse(match[0]);
+}
+
+function getTargetPrediction() {
+    const p = state.profile;
+    if (!p || p.goal !== 'lose' || Number(p.weight) <= Number(p.targetWeight)) return null;
+    const deficit = Math.max(250, Number(p.tdee || 0) - Number(p.targetCalorie || 0));
+    const diff = Number(p.weight) - Number(p.targetWeight);
+    if (deficit <= 0 || diff <= 0) return null;
+    const days = Math.ceil((diff * 7700) / deficit);
+    const d = new Date(); d.setDate(d.getDate() + days);
+    return { days, date: d };
+}
+
+function renderWeightStory() {
+    const p = state.profile;
+    const story = document.getElementById('weight-story');
+    if (!p || !story) return;
+    const hist = state.weightHistory || [];
+    const actual = Number(p.weight);
+    const target = Number(p.targetWeight);
+    const pred = getTargetPrediction();
+    let text = `Berat aktual ${actual.toLocaleString('id-ID')} kg dari target ${target.toLocaleString('id-ID')} kg.`;
+    if (hist.length >= 2) {
+        const first = Number(hist[0].weight);
+        const delta = actual - first;
+        text += delta < 0 ? ` Kamu sudah turun sekitar ${Math.abs(delta).toFixed(1)} kg dari catatan awal.` : delta > 0 ? ` Catatan aktual menunjukkan kenaikan sekitar ${delta.toFixed(1)} kg dari catatan awal.` : ' Berat aktualmu masih sama dengan catatan awal.';
+    }
+    if (pred) text += ` Prediksi saat ini sekitar ${pred.date.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}, tetapi kenyataan dapat berubah mengikuti data aktualmu.`;
+    story.textContent = text;
+}
+
+async function generateStartingInsight() {
+    const p = state.profile;
+    const el = document.getElementById('starting-insight');
+    const btn = document.getElementById('btn-start-journey');
+    if (!p || !el) return;
+    document.getElementById('start-weight').textContent = `${p.weight} kg`;
+    document.getElementById('start-tdee').textContent = `${p.tdee} kkal`;
+    document.getElementById('start-target').textContent = `${p.targetCalorie} kkal`;
+    document.getElementById('start-goal-weight').textContent = `${p.targetWeight} kg`;
+    try {
+        const prompt = `Kamu adalah AI Life Balance. Jelaskan kondisi awal pengguna secara edukatif dan ringan dalam Bahasa Indonesia, maksimal 4 kalimat. Jangan diagnosis medis dan jangan menakut-nakuti. Profil: usia ${p.age}, jenis kelamin ${p.gender}, tinggi ${p.height} cm, berat ${p.weight} kg, target ${p.targetWeight} kg, tujuan ${getGoalLabel(p.goal)}, aktivitas ${getActivityLabel(p.activity)}, TDEE ${p.tdee} kkal, target harian ${p.targetCalorie} kkal. Jelaskan apa arti kebutuhan energi dan mengapa keseimbangan makanan serta aktivitas penting. Jangan mengarang data yang tidak tersedia.`;
+        const result = await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});
+        const text = result?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('').trim();
+        el.textContent = text || 'Kondisi awalmu sudah tercatat. Mulai dengan mencatat makanan dan aktivitas agar AI dapat membaca keseimbanganmu dari hari ke hari.';
+    } catch (err) {
+        console.warn('Starting point AI:', err);
+        el.textContent = `Kebutuhan energi harianmu diperkirakan sekitar ${p.tdee} kkal. Target harian ${p.targetCalorie} kkal digunakan sebagai panduan sesuai tujuanmu. Catat makanan dan aktivitas secara konsisten agar AI dapat membantu membaca keseimbanganmu dengan lebih akurat.`;
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function initStartingPoint() {
+    const btn = document.getElementById('btn-start-journey');
+    if (btn && !btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => { window.location.hash = '#dashboard'; });
+    }
+    generateStartingInsight();
+}
+
+function initOnboarding() {
+    const form = document.getElementById('profile-form');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('prof-name')?.value.trim();
+        const age = Number(document.getElementById('prof-age')?.value);
+        const gender = document.getElementById('prof-gender')?.value;
+        const height = Number(document.getElementById('prof-height')?.value);
+        const weight = Number(document.getElementById('prof-weight')?.value);
+        const targetWeight = Number(document.getElementById('prof-target')?.value);
+        const goal = document.getElementById('prof-goal')?.value;
+        const activity = document.getElementById('prof-activity')?.value;
+        if (!name || !age || !gender || !height || !weight || !targetWeight || !goal || !activity) return showAppAlert('warning','Data belum lengkap','Lengkapi semua data profil terlebih dahulu.');
+        if (goal === 'lose' && targetWeight >= weight) return showAppAlert('warning','Target berat belum sesuai','Untuk tujuan menurunkan berat badan, target berat harus lebih rendah dari berat saat ini.');
+        const profile = {name,age,gender,height,weight,targetWeight,goal,activity};
+        state.profile = {...profile,...calculateHealthStats(profile)};
+        state.weightHistory = state.weightHistory || [];
+        state.weightHistory.push({date:getTodayString(),weight});
+        state.weightHistory = state.weightHistory.slice(-60);
+        saveState();
+        window.location.hash = '#starting-point';
+    });
+}
+
+async function initDashboard() {
+    if (!state.profile) return;
+    const p=state.profile, summary=getTodaySummary(), target=Number(p.targetCalorie||0), netCal=summary.calIn-summary.calOut, calLeft=Math.max(0,target-netCal);
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    set('dash-name',p.name); set('dash-w-current',`${p.weight} kg`); set('dash-w-target',`${p.targetWeight} kg`);
+    set('dash-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`); set('dash-target-cal',`${Math.round(target).toLocaleString('id-ID')} kkal`);
+    set('dash-cal-in',summary.calIn); set('dash-cal-out',summary.calOut); set('dash-cal-left',calLeft);
+    const targetP=Math.max(1,Math.round((target*.30)/4)),targetC=Math.max(1,Math.round((target*.40)/4)),targetF=Math.max(1,Math.round((target*.30)/9));
+    set('txt-p',`${summary.p}/${targetP}g`); set('txt-c',`${summary.c}/${targetC}g`); set('txt-f',`${summary.f}/${targetF}g`);
+    const bp=document.getElementById('bar-p'),bc=document.getElementById('bar-c'),bf=document.getElementById('bar-f');
+    if(bp)bp.style.width=`${Math.min(100,(summary.p/targetP)*100)}%`; if(bc)bc.style.width=`${Math.min(100,(summary.c/targetC)*100)}%`; if(bf)bf.style.width=`${Math.min(100,(summary.f/targetF)*100)}%`;
+    let score=100;if(!summary.calIn&&!summary.calOut)score=0;else{if(!summary.calIn)score-=35;if(netCal>target+Math.max(200,target*.1))score-=25;else if(netCal>target)score-=12;if(summary.calOut>0)score+=5;if(summary.calOut>=250)score+=5;}score=Math.max(0,Math.min(100,Math.round(score)));
+    set('dash-score',score);set('balance-score-note',score===0?'Belum ada catatan hari ini':'Indikator keseimbangan harian');const circle=document.getElementById('score-circle');if(circle)circle.style.strokeDasharray=`${score},100`;
+    renderProgressChart();
+    const story=document.getElementById('dashboard-story-text');
+    if(story){
+        if(!summary.calIn && !summary.calOut) story.textContent='Hari ini baru dimulai. Catat makanan atau aktivitas pertamamu agar AI bisa mulai membaca keseimbanganmu.';
+        else if(netCal<=target) story.textContent=`Hari ini kamu sudah menjaga keseimbangan dengan cukup baik. Energi bersihmu ${Math.round(netCal).toLocaleString('id-ID')} kkal dari target ${Math.round(target).toLocaleString('id-ID')} kkal.`;
+        else story.textContent=`Hari ini energi masukmu sedikit lebih tinggi dari target. Jangan khawatir—lihat pola harianmu dan lanjutkan dengan pilihan yang lebih seimbang.`;
+    }
+    maybeShowDailyAlert(summary);
+}
+
+async function initProgress(){
+    if(!state.profile)return;
+    const p=state.profile;
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    set('progress-w-current',`${p.weight} kg`);set('progress-w-target',`${p.targetWeight} kg`);
+    const pred=getTargetPrediction();set('progress-prediction',pred?pred.date.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):(p.goal==='maintain'?'Menjaga target':'Belum cukup data'));
+    renderWeightHistoryChartForProgress();renderWeightStoryForProgress();
+    const journey=document.getElementById('progress-journey-story');
+    if(journey){
+        if(state.demoMode) journey.textContent='Contoh cerita: pengguna mulai dari berat awal, membangun kebiasaan, lalu membandingkan berat aktual dengan target. Data ini hanya simulasi untuk demo.';
+        else if(p.goal==='maintain') journey.textContent=`Berat aktualmu ${p.weight} kg. Fokus perjalananmu adalah menjaga pola yang konsisten dan memantau perubahan dari waktu ke waktu.`;
+        else journey.textContent=`Saat ini kamu berada di ${p.weight} kg dengan target ${p.targetWeight} kg. Check-in secara berkala agar perjalanan nyata bisa dibandingkan dengan prediksi.`;
+    }
+    
+    const input=document.getElementById('progress-weight-checkin'),save=document.getElementById('progress-weight-checkin-btn');if(input)input.value=p.weight;
+    if(save&&!save.dataset.bound){save.dataset.bound='1';save.addEventListener('click',()=>{const w=Number(input?.value);if(!w||w<10||w>300)return showAppAlert('warning','Berat belum valid','Masukkan berat aktual yang valid.');p.weight=w;Object.assign(p,calculateHealthStats(p));state.weightHistory=state.weightHistory||[];state.weightHistory.push({date:getTodayString(),weight:w});state.weightHistory=state.weightHistory.slice(-60);invalidateInsightCache();saveState();showAppAlert('success','Check-in tersimpan','Berat aktualmu sudah diperbarui dan akan digunakan untuk membaca perjalananmu.');initProgress();});}
+}
+function renderWeightHistoryChartForProgress(){
+    const el=document.getElementById('progress-weight-history-chart');
+    if(!el) return;
+    const data=(state.weightHistory||[]).slice(-10).map(x=>({date:x.date,weight:Number(x.weight)})).filter(x=>Number.isFinite(x.weight));
+    if(!data.length){el.innerHTML='<div class="weight-chart-empty">Belum ada check-in berat aktual.</div>';return;}
+    const values=data.map(x=>x.weight), min=Math.min(...values), max=Math.max(...values), pad=Math.max(.5,(max-min)*.18), lo=min-pad, hi=max+pad;
+    const W=560,H=210,left=46,right=18,top=24,bottom=42,plotW=W-left-right,plotH=H-top-bottom;
+    const x=i=>data.length===1?left+plotW/2:left+(i/(data.length-1))*plotW;
+    const y=v=>top+((hi-v)/(hi-lo))*plotH;
+    const points=data.map((d,i)=>`${x(i).toFixed(1)},${y(d.weight).toFixed(1)}`).join(' ');
+    const grid=[0,.5,1].map(t=>{const yy=top+t*plotH;const val=hi-t*(hi-lo);return `<line x1="${left}" y1="${yy.toFixed(1)}" x2="${W-right}" y2="${yy.toFixed(1)}" class="weight-grid-line"/><text x="${left-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" class="weight-axis-label">${val.toFixed(1)}</text>`;}).join('');
+    const labels=data.map((d,i)=>{const label=new Date(d.date+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'});return `<text x="${x(i).toFixed(1)}" y="${H-12}" text-anchor="middle" class="weight-date-label">${label}</text>`;}).join('');
+    const dots=data.map((d,i)=>{const current=i===data.length-1;return `<g class="weight-point-group"><circle cx="${x(i).toFixed(1)}" cy="${y(d.weight).toFixed(1)}" r="${current?7:5}" class="${current?'weight-point-current':'weight-point-dot'}"/><title>${formatDateId(d.date)}: ${d.weight} kg${current?' — posisi terakhir':''}</title>${current?`<text x="${x(i).toFixed(1)}" y="${Math.max(13,y(d.weight)-12).toFixed(1)}" text-anchor="middle" class="weight-current-label">Saat ini • ${d.weight} kg</text>`:''}</g>`;}).join('');
+    el.innerHTML=`<div class="weight-chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik berat aktual dari waktu ke waktu">${grid}<polyline points="${points}" class="weight-line"/>${dots}${labels}</svg></div><div class="weight-chart-caption"><span><i class="weight-current-key"></i> Check-in terakhir</span><span>${data.length} check-in</span></div>`;
+}
+function renderWeightStoryForProgress(){const el=document.getElementById('progress-weight-story');if(!el||!state.profile)return;const p=state.profile;const target=Number(p.targetWeight),current=Number(p.weight);if(p.goal==='maintain'){el.textContent=`Berat aktualmu ${current} kg. Fokus utama adalah menjaga pola yang konsisten dan memantau perubahan dari waktu ke waktu.`;return;}const diff=current-target;el.textContent=diff>0?`Saat ini kamu ${diff.toFixed(1)} kg dari target. Check-in secara berkala agar prediksi dapat dibandingkan dengan kondisi nyata.`:`Berat aktualmu sudah mencapai atau melewati target. Tetap pantau perubahan secara berkala agar perjalanan tetap sehat.`;}
+
+async function generateDashboardInsight({force=false,cacheKey,summary,netCal,insightEl,refreshBtn}) {
+    if(!insightEl || !state.profile) return;
+    if(!force && state.insightCache[cacheKey]) { insightEl.textContent=state.insightCache[cacheKey].text; return; }
+    if(refreshBtn){refreshBtn.disabled=true;refreshBtn.innerHTML='<span class="material-symbols-rounded spin">sync</span> Membaca';}
+    insightEl.textContent='AI sedang membaca cerita keseimbanganmu...';
+    try{
+        const p=state.profile;
+        const prompt=`Kamu adalah AI Life Balance. Ceritakan kondisi hari ini dalam Bahasa Indonesia natural, hangat, maksimal 3 kalimat. Data pengguna: ${p.name}, berat ${p.weight} kg, target ${p.targetWeight} kg, tujuan ${getGoalLabel(p.goal)}, TDEE ${p.tdee} kkal, target harian ${p.targetCalorie} kkal. Hari ini: makanan ${summary.calIn} kkal, aktivitas ${summary.calOut} kkal, net ${netCal} kkal. Jelaskan hubungan makanan, aktivitas dan keseimbangan hari ini. Jangan diagnosis dan jangan mengarang data.`;
+        const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});
+        const text=result?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('').trim();
+        const finalText=text||'Catat makanan dan aktivitas agar cerita keseimbangan harianmu semakin lengkap.';
+        state.insightCache[cacheKey]={text:finalText,createdAt:Date.now()};
+        state.insightCache=Object.fromEntries(Object.entries(state.insightCache).sort((a,b)=>(b[1]?.createdAt||0)-(a[1]?.createdAt||0)).slice(0,20)); saveState(); insightEl.textContent=finalText;
+    }catch(err){ console.warn('AI Insight:',err); insightEl.textContent=`Hari ini kamu mencatat ${summary.calIn} kkal dari makanan dan ${summary.calOut} kkal dari aktivitas. Terus catat agar AI bisa melihat pola harianmu dengan lebih akurat.`; }
+    finally{if(refreshBtn){refreshBtn.disabled=false;refreshBtn.innerHTML='<span class="material-symbols-rounded">refresh</span> Perbarui';}}
+}
+
+async function loadMealPlanner(){
+    const container=document.getElementById('meal-plan-container'); if(!container||!state.profile)return;
+    const target=Number(state.profile.targetCalorie||0), summary=getTodaySummary(), remaining=Math.max(0,target-(summary.calIn-summary.calOut));
+    container.innerHTML='<div class="planner-loading"><span class="material-symbols-rounded spin">auto_awesome</span><span>AI sedang menyusun menu personal...</span></div>';
+    try{
+        const prompt=`Buat rencana makan sehari personal untuk AI Life Balance. Target ${target} kkal. Sudah masuk ${summary.calIn} kkal dan aktivitas ${summary.calOut} kkal, sehingga sisa panduan energi sekitar ${remaining} kkal. Tujuan ${getGoalLabel(state.profile.goal)}. Berat ${state.profile.weight} kg, target ${state.profile.targetWeight} kg. Berikan 4 bagian breakfast,lunch,dinner,snack. Kembalikan JSON murni dengan cal angka yang masuk akal dan berbeda sesuai jenis makanan, name, detail. Total seluruh cal tidak boleh melebihi ${Math.max(target,remaining)} kkal dan jangan membuat semua menu sama. Gunakan Bahasa Indonesia. Jangan markdown.`;
+        const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});
+        const data=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));
+        const labels=[['breakfast','Sarapan'],['lunch','Makan Siang'],['dinner','Makan Malam'],['snack','Snack']];
+        container.innerHTML='<div class="ai-result-badge"><span class="material-symbols-rounded">auto_awesome</span> Dibuat AI</div>'+labels.map(([k,l])=>data[k]?`<div class="meal-slot"><h4>${l} (~${Math.round(Number(data[k].cal)||0)} kkal)</h4><p><strong>${data[k].name||''}</strong><br>${data[k].detail||''}</p></div>`:'').join('');
+    }catch(err){
+        console.warn('Meal Planner AI fallback',err);
+        const b=Math.max(250,Math.round(remaining*.25)),l=Math.max(300,Math.round(remaining*.35)),d=Math.max(250,Math.round(remaining*.30)),s=Math.max(100,remaining-b-l-d);
+        container.innerHTML='<div class="fallback-badge">Panduan contoh — AI belum tersedia</div>'+`<div class="meal-slot"><h4>Sarapan (~${b} kkal)</h4><p>Oatmeal, buah, dan telur sebagai contoh kombinasi seimbang.</p></div><div class="meal-slot"><h4>Makan Siang (~${l} kkal)</h4><p>Nasi secukupnya, ayam/ikan, sayuran, dan buah.</p></div><div class="meal-slot"><h4>Makan Malam (~${d} kkal)</h4><p>Protein tanpa banyak lemak, sayuran, dan karbohidrat secukupnya.</p></div><div class="meal-slot"><h4>Snack (~${s} kkal)</h4><p>Contoh: yogurt, buah, atau camilan sederhana sesuai sisa energi.</p></div>`;
+    }
+}
+
+function initScan(){
+    const wrapper=document.getElementById('camera-wrapper'), video=document.getElementById('camera-stream'), canvas=document.getElementById('camera-canvas'), errorMsg=document.getElementById('camera-error'), res=document.getElementById('scan-result'), load=document.getElementById('scan-loading'), det=document.getElementById('scan-details'), btnCapture=document.getElementById('btn-capture');
+    if(!wrapper||!res||!load||!det)return;
+    if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{currentStream=stream;video.srcObject=stream;}).catch(()=>{wrapper.style.display='none';if(errorMsg)errorMsg.style.display='block';});}else{wrapper.style.display='none';if(errorMsg)errorMsg.style.display='block';}
+    const showResult=(data)=>{load.style.display='none';det.style.display='block';document.getElementById('res-food-name').value=data.name||'Makanan';document.getElementById('res-food-cal').value=Number(data.cal)||0;document.getElementById('res-p').value=Number(data.p)||0;document.getElementById('res-c').value=Number(data.c)||0;document.getElementById('res-f').value=Number(data.f)||0;};
+    const analyzeImage=async(base64)=>{const prompt=`Analisis foto makanan. Identifikasi makanan dan perkiraan porsinya dari gambar. Kembalikan JSON murni persis: {"name":"","cal":0,"p":0,"c":0,"f":0}. Kalori dan makro harus berupa estimasi yang masuk akal berdasarkan makanan dan porsi yang terlihat, jangan gunakan angka default yang sama untuk semua makanan. Jika bukan makanan, gunakan name "Bukan Makanan" dan semua angka 0. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{inlineData:{mimeType:'image/jpeg',data:base64}},{text:prompt}]}]});return parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));};
+    btnCapture?.addEventListener('click',async()=>{if(!video.videoWidth)return;canvas.width=Math.min(video.videoWidth,1280);canvas.height=Math.round(video.videoHeight*(canvas.width/video.videoWidth));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);const dataUrl=canvas.toDataURL('image/jpeg',0.72),base64=dataUrl.split(',')[1];wrapper.style.display='none';res.style.display='block';det.style.display='none';load.style.display='block';try{showResult(await analyzeImage(base64));}catch(err){alert(`Gagal menganalisis gambar.\n\n${err.message||'Kesalahan tidak diketahui.'}`);wrapper.style.display='block';res.style.display='none';}});
+    const manual=document.getElementById('manual-food-input'), manualBtn=document.getElementById('btn-manual-food');
+    const analyzeManual=async()=>{const val=manual?.value.trim();if(!val){showAppAlert('warning','Makanan belum diisi','Ketik nama makanan atau minuman terlebih dahulu sebelum dianalisis.');manual?.focus();return;}manualBtn.disabled=true;manualBtn.innerHTML='<span class="material-symbols-rounded spin">sync</span> Menganalisis';wrapper.style.display='none';res.style.display='block';det.style.display='none';load.style.display='block';try{const prompt=`Kamu adalah AI Food Scanner. Analisis makanan yang diketik pengguna: "${val}". Jika porsi disebutkan, gunakan porsi tersebut. Jika porsi tidak disebutkan, nyatakan estimasi berdasarkan porsi standar dan tetap beri angka. Kembalikan JSON murni: {"name":"","cal":0,"p":0,"c":0,"f":0,"portion":""}. Estimasikan kalori dan makro berdasarkan jenis makanan, bahan, cara masak, dan porsi. Jangan gunakan angka default yang sama untuk semua makanan. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});showResult(parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')));manual.value='';}catch(err){wrapper.style.display='block';res.style.display='none';alert(`Gagal menganalisis makanan.\n\n${err.message||'Kesalahan tidak diketahui.'}`);}finally{manualBtn.disabled=false;manualBtn.innerHTML='<span class="material-symbols-rounded">auto_awesome</span> Analisis dengan AI';}};
+    manual?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();analyzeManual();}}); manualBtn?.addEventListener('click',analyzeManual);
+    document.getElementById('btn-save-food')?.addEventListener('click',()=>{const item={id:Date.now(),date:getTodayString(),name:document.getElementById('res-food-name').value,cal:Number(document.getElementById('res-food-cal').value)||0,p:Number(document.getElementById('res-p').value)||0,c:Number(document.getElementById('res-c').value)||0,f:Number(document.getElementById('res-f').value)||0};state.diary.push(item);invalidateInsightCache();saveState();manual.value='';window.location.hash='#dashboard';});
+    document.getElementById('btn-cancel-food')?.addEventListener('click',()=>{res.style.display='none';det.style.display='none';load.style.display='block';wrapper.style.display='block';manual.value='';});
+}
+
+
+function initFood(){
+    const tabBtns=document.querySelectorAll('.food-view .tab-btn'), contents=document.querySelectorAll('.food-view .tab-content');
+    tabBtns.forEach(btn=>{btn.addEventListener('click',()=>{tabBtns.forEach(b=>b.classList.remove('active'));contents.forEach(c=>c.style.display='none');btn.classList.add('active');const target=document.getElementById(`tab-${btn.dataset.tab}`);if(target)target.style.display='block';if(btn.dataset.tab==='planner')loadMealPlanner();if(btn.dataset.tab==='history')renderFoodHistoryMaster();});});
+    const list=document.getElementById('food-list'); const diary=getTodayDiary(); if(list)list.innerHTML=diary.length?diary.map(x=>`<div class="list-item"><div class="item-info"><h4>${x.name}</h4><span class="text-sm">${x.p||0}g P • ${x.c||0}g C • ${x.f||0}g L</span></div><div class="item-cal">${x.cal} Kkal</div></div>`).join(''):'<p class="empty-state">Belum ada makanan yang dicatat hari ini.</p>';
+}
+function renderFoodHistoryMaster(){const s=document.getElementById('food-history-summary'),h=document.getElementById('food-history-list');if(!s||!h)return;const groups=getDateGroups(state.diary),total=state.diary.reduce((a,x)=>a+Number(x.cal||0),0);s.innerHTML=`<div class="history-stat"><strong>${state.diary.length}</strong><span>catatan</span></div><div class="history-stat"><strong>${total.toLocaleString('id-ID')}</strong><span>kkal total</span></div><div class="history-stat"><strong>${groups.length}</strong><span>hari</span></div>`;h.innerHTML=groups.length?groups.slice(0,30).map(([date,items])=>`<div class="history-day"><div class="history-day-head"><strong>${formatDateId(date)}</strong><span>${items.reduce((a,x)=>a+Number(x.cal||0),0).toLocaleString('id-ID')} Kkal</span></div>${items.map(x=>`<div class="history-row"><div><strong>${x.name}</strong><small>${x.p||0}g P • ${x.c||0}g C • ${x.f||0}g L</small></div><span>${x.cal} Kkal</span></div>`).join('')}</div>`).join(''):'<p class="empty-state">Belum ada riwayat makanan.</p>';}
+
+function initActivity(){
+    const renderList=()=>{const list=document.getElementById('activity-list');const acts=getTodayActivity();if(!acts.length){list.innerHTML='<p class="empty-state">Belum ada aktivitas yang dicatat hari ini.</p>';return;}list.innerHTML=acts.map(x=>`<div class="list-item"><div class="item-info"><h4>${x.name}</h4><span class="text-sm">${Math.round(x.minutes||0)} menit • MET ${x.met||'-'}</span></div><div class="item-cal" style="color:var(--warning)">− ${x.cal} Kkal</div></div>`).join('');};
+    const renderHistory=()=>{const se=document.getElementById('activity-history-summary'),he=document.getElementById('activity-history-list'),groups=getDateGroups(state.activities);const total=state.activities.reduce((s,x)=>s+Number(x.cal||0),0);const mins=state.activities.reduce((s,x)=>s+Number(x.minutes||0),0);if(se)se.innerHTML=`<div class="history-stat"><strong>${state.activities.length}</strong><span>aktivitas</span></div><div class="history-stat"><strong>${total.toLocaleString('id-ID')}</strong><span>kkal terbakar</span></div><div class="history-stat"><strong>${Math.round(mins)}</strong><span>menit</span></div>`;if(he)he.innerHTML=groups.length?groups.slice(0,30).map(([date,items])=>`<div class="history-day"><div class="history-day-head"><strong>${formatDateId(date)}</strong><span>${items.reduce((s,x)=>s+Number(x.cal||0),0).toLocaleString('id-ID')} Kkal</span></div>${items.map(x=>`<div class="history-row"><div><strong>${x.name}</strong><small>${Math.round(x.minutes||0)} menit • MET ${x.met||'-'}</small></div><span>− ${x.cal} Kkal</span></div>`).join('')}</div>`).join(''):'<p class="empty-state">Belum ada riwayat aktivitas.</p>';};
+    renderList();renderHistory();
+    document.querySelectorAll('.activity-tabs .tab-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.activity-tabs .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const h=btn.dataset.activityTab==='history';document.getElementById('activity-today-panel').style.display=h?'none':'block';document.getElementById('activity-history-panel').style.display=h?'block':'none';if(h)renderHistory();}));
+    const input=document.getElementById('act-input'),button=document.getElementById('btn-save-act');
+    const saveActivity=async()=>{const text=input?.value.trim();if(!text){showAppAlert('warning','Aktivitas belum diisi','Ketik aktivitas dan durasinya terlebih dahulu sebelum dianalisis.');input?.focus();return;}button.disabled=true;button.innerHTML='<span class="material-symbols-rounded spin">sync</span><span class="btn-label-loading">AI menghitung...</span>';const local=estimateActivityCalories(text,state.profile.weight);let est=local;try{const prompt=`Kamu adalah AI Activity Tracker. Analisis aktivitas: "${text}". Berat pengguna ${state.profile.weight} kg. Kembalikan JSON murni {"cal":number,"minutes":number,"met":number,"activity":"string"}. Gunakan jenis aktivitas, durasi, intensitas yang disebutkan. Jika durasi tidak disebutkan gunakan 30 menit. Hitung secara konservatif dan realistis; jangan gunakan angka 200 sebagai default. Kalori harus berbeda sesuai aktivitas/durasi/berat. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});const ai=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));if(Number(ai.cal)>0)est={cal:Math.round(Number(ai.cal)),minutes:Number(ai.minutes)||local.minutes,met:Number(ai.met)||local.met,label:ai.activity||local.label};}catch(err){console.warn('Activity AI fallback:',err);}state.activities.push({id:Date.now(),date:getTodayString(),name:text,cal:est.cal,minutes:est.minutes,met:est.met,source:'ai-or-fallback'});invalidateInsightCache();saveState();input.value='';button.disabled=false;button.innerHTML='<span class="material-symbols-rounded">send</span>';renderList();renderHistory();};
+    input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveActivity();}});button?.addEventListener('click',saveActivity);
+}
+
+function initCoach(){
+    const chat=document.getElementById('chat-container'),button=document.getElementById('btn-send-chat'),input=document.getElementById('chat-input');if(!chat||!button||!input)return;
+    const add=(text,role)=>{const d=document.createElement('div');d.className=`chat-msg ${role}-msg`;const b=document.createElement('div');b.className='msg-bubble';b.textContent=text;d.appendChild(b);chat.appendChild(d);chat.parentElement.scrollTop=chat.parentElement.scrollHeight;};
+    chat.innerHTML=''; if(state.chatHistory?.length)state.chatHistory.forEach(m=>add(m.text,m.role)); else add('Halo! Saya AI Life Coach. Kita bisa membahas makanan, aktivitas, kebiasaan, target, energi, dan progress harianmu.','coach');
+    document.getElementById('btn-clear-chat')?.addEventListener('click',()=>{if(confirm('Hapus semua riwayat obrolan?')){state.chatHistory=[];saveState();chat.innerHTML='';add('Riwayat chat telah dihapus. Ada yang ingin ditanyakan?','coach');}});
+    const send=async()=>{const val=input.value.trim();if(!val)return;add(val,'user');input.value='';state.chatHistory.push({role:'user',text:val});saveState();const id='load-'+Date.now(),d=document.createElement('div');d.className='chat-msg coach-msg';d.id=id;d.innerHTML='<div class="msg-bubble loading-bubble"><span class="material-symbols-rounded spin">sync</span> AI sedang berpikir...</div>';chat.appendChild(d);try{const s=getTodaySummary(),p=state.profile;const sys=`Kamu adalah AI Life Coach dalam aplikasi AI Life Balance. Jawab Bahasa Indonesia natural, hangat, singkat, praktis. Topik boleh makanan, minuman, aktivitas, kebiasaan, energi, target berat, progress, tidur, atau keseimbangan harian. Jangan diagnosis medis. Profil: ${p.name}, usia ${p.age}, berat ${p.weight} kg, target ${p.targetWeight} kg, TDEE ${p.tdee} kkal, target harian ${p.targetCalorie} kkal. Hari ini masuk ${s.calIn} kkal, aktivitas ${s.calOut} kkal.`;const valid=[...state.chatHistory].slice(-12).map(m=>({role:m.role==='coach'?'model':'user',parts:[{text:m.text}]}));const payload={systemInstruction:{parts:[{text:sys}]},contents:valid};const result=await callGeminiAPI(payload);const reply=result?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('').trim();if(!reply)throw new Error('Respons AI kosong.');document.getElementById(id)?.remove();add(reply,'coach');state.chatHistory.push({role:'coach',text:reply});state.chatHistory=state.chatHistory.slice(-30);saveState();}catch(err){document.getElementById(id)?.remove();add(`Maaf, AI belum dapat menjawab saat ini. ${err.message||'Silakan coba lagi.'}`,'coach');}};
+    button.addEventListener('click',send);input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+}
+
+function navigate(hash){
+    if(!hash)hash='#dashboard';
+    if(!state.profile && hash!=='#onboarding'){window.location.hash='#onboarding';return;}
+    if(hash!=='#scan')stopCamera();
+    const viewName=hash.replace('#','');
+    if(viewName!=='progress') state.demoMode=false;
+    const template=document.getElementById(`tpl-${viewName}`);if(!template)return;
+    viewContainer.innerHTML='';viewContainer.appendChild(template.content.cloneNode(true));
+    const isOnboarding=viewName==='onboarding';
+    const hideBottomNav=isOnboarding||viewName==='starting-point'; bottomNav.classList.toggle('nav-hidden',hideBottomNav); bottomNav.style.display=hideBottomNav?'none':'flex';
+    const coachFab=document.getElementById('coach-fab'); if(coachFab){ const hideCoach=hideBottomNav || viewName==='about' || viewName==='coach'; coachFab.classList.toggle('hidden',hideCoach); if(!hideCoach) document.getElementById('app')?.appendChild(coachFab); }
+    document.querySelectorAll('.nav-item').forEach(el=>{el.classList.toggle('active',el.dataset.target===viewName);});
+    if(viewName==='onboarding')initOnboarding(); else if(viewName==='starting-point')initStartingPoint(); else if(viewName==='dashboard')initDashboard(); else if(viewName==='food')initFood(); else if(viewName==='scan')initScan(); else if(viewName==='activity')initActivity(); else if(viewName==='coach')initCoach(); else if(viewName==='settings')initSettings(); else if(viewName==='progress')initProgress(); else if(viewName==='about')initAbout();
+}
+
+// Refresh dashboard when returning to foreground after a longer pause.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden && state.profile && window.location.hash==='#dashboard')navigate('#dashboard');});
