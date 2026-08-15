@@ -223,7 +223,7 @@
             </div>
             <div class="card starting-story">
                 <div class="card-header"><span class="material-symbols-rounded icon-sparkle">auto_awesome</span><h3>Gambaran kondisimu</h3><span class="ai-live-badge">AI</span></div>
-                <p id="starting-insight">AI sedang membaca kondisi awalmu...</p>
+                <div id="starting-ai-loading" class="starting-ai-loading" role="status" aria-live="polite"><span class="loading-spinner-ring"></span><div><strong>AI sedang menyiapkan gambaranmu…</strong><small>Menganalisis data awal</small></div></div><p id="starting-insight" style="display:none">AI sedang membaca kondisi awalmu...</p>
             </div>
             <div class="card education-card compact-story">
                 <div class="card-header"><span class="material-symbols-rounded">lightbulb</span><h3>Kenapa keseimbangan penting?</h3></div>
@@ -340,8 +340,8 @@
 
             <section class="card daily-target-card glass-card">
                 <div class="card-header"><span class="material-symbols-rounded">calculate</span><h3>Rumus Target Harian</h3></div>
-                <div class="daily-target-equation"><strong id="formula-tdee">TDEE</strong><span>−</span><strong id="formula-deficit">Defisit</strong><span>=</span><strong id="formula-target">Target kkal</strong></div>
-                <p id="formula-caption">Kebutuhan energi harian dikurangi defisit sesuai tujuanmu.</p>
+                <div class="daily-target-equation"><strong id="formula-tdee">TDEE</strong><span>−</span><strong id="formula-deficit">Defisit</strong><span>=</span><strong id="formula-target">Target kkal</strong></div><div class="formula-meaning"><span><b>A</b> = kebutuhan energi harian</span><span><b>B</b> = pengurangan sesuai tujuan</span><span><b>C</b> = target kalori harian</span></div>
+                <p id="formula-caption">Contoh: TDEE 2.000 − defisit 500 = target 1.500 kkal/hari.</p>
             </section>
         </div>
     </template>

@@ -1509,3 +1509,23 @@ html[data-theme="dark"] .daily-target-equation strong { background:rgba(16,185,1
   .daily-target-equation strong { padding:4px 5px; }
   .energy-balance-row { grid-template-columns:64px 1fr 30px; }
 }
+
+
+/* MASTER UPDATE V9.1 — Starting Point AI progress + compact scan + clearer target formula */
+.starting-ai-loading{display:flex;align-items:center;justify-content:center;gap:10px;margin:2px 0 0;padding:9px 10px;border-radius:12px;background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.12);text-align:left}
+.starting-ai-loading strong{display:block;font-size:.75rem;line-height:1.2}
+.starting-ai-loading small{display:block;margin-top:2px;color:var(--text-muted);font-size:.65rem}
+.loading-spinner-ring{width:25px;height:25px;border-radius:50%;border:3px solid rgba(14,165,233,.16);border-top-color:#0ea5e9;animation:startingSpin .8s linear infinite;flex:0 0 auto}
+@keyframes startingSpin{to{transform:rotate(360deg)}}
+.formula-meaning{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:.5rem 0 .25rem;font-size:.62rem;color:var(--text-muted);line-height:1.25;text-align:center}
+.formula-meaning span{padding:5px 4px;border-radius:8px;background:rgba(15,23,42,.035)}
+.formula-meaning b{color:var(--text-main)}
+.daily-target-card #formula-caption{font-size:.68rem;line-height:1.35}
+.scanner-container{padding-top:10px!important;padding-bottom:12px!important}
+.scanner-container .camera-wrapper{height:clamp(313px,42.5vh,400px)!important;min-height:313px!important;max-height:400px!important}
+.scanner-container .manual-entry{margin-top:.55rem!important}
+.scanner-container .manual-entry p{margin:.1rem 0 .25rem!important;font-size:.68rem!important;line-height:1.25}
+.manual-scan-group{gap:6px!important}
+.manual-scan-group input{min-height:42px!important}
+.manual-scan-group button{min-height:42px!important;margin-top:0!important}
+@media(max-width:430px){.scanner-container .camera-wrapper{height:clamp(288px,40vh,338px)!important;min-height:288px!important;max-height:338px!important}.formula-meaning{font-size:.58rem;gap:4px}.formula-meaning span{padding:4px 2px}}

@@ -1112,15 +1112,21 @@ async function generateStartingInsight() {
     document.getElementById('start-tdee').textContent = `${p.tdee} kkal`;
     document.getElementById('start-target').textContent = `${p.targetCalorie} kkal`;
     document.getElementById('start-goal-weight').textContent = `${p.targetWeight} kg`;
+    const loadingEl = document.getElementById('starting-ai-loading');
+    if (loadingEl) loadingEl.style.display = 'flex';
+    el.style.display = 'none';
     try {
         const prompt = `Kamu adalah AI Life Balance. Jelaskan kondisi awal pengguna secara edukatif dan ringan dalam Bahasa Indonesia, maksimal 4 kalimat. Jangan diagnosis medis dan jangan menakut-nakuti. Profil: usia ${p.age}, jenis kelamin ${p.gender}, tinggi ${p.height} cm, berat ${p.weight} kg, target ${p.targetWeight} kg, tujuan ${getGoalLabel(p.goal)}, aktivitas ${getActivityLabel(p.activity)}, TDEE ${p.tdee} kkal, target harian ${p.targetCalorie} kkal. Jelaskan apa arti kebutuhan energi dan mengapa keseimbangan makanan serta aktivitas penting. Jangan mengarang data yang tidak tersedia.`;
         const result = await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});
         const text = result?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('').trim();
         el.textContent = text || 'Kondisi awalmu sudah tercatat. Mulai dengan mencatat makanan dan aktivitas agar AI dapat membaca keseimbanganmu dari hari ke hari.';
+        el.style.display = 'block';
     } catch (err) {
         console.warn('Starting point AI:', err);
         el.textContent = `Kebutuhan energi harianmu diperkirakan sekitar ${p.tdee} kkal. Target harian ${p.targetCalorie} kkal digunakan sebagai panduan sesuai tujuanmu. Catat makanan dan aktivitas secara konsisten agar AI dapat membantu membaca keseimbanganmu dengan lebih akurat.`;
+        el.style.display = 'block';
     } finally {
+        if (loadingEl) loadingEl.style.display = 'none';
         if (btn) btn.disabled = false;
     }
 }
@@ -1178,7 +1184,7 @@ async function initDashboard() {
     set('formula-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`);
     set('formula-deficit',deficit>0?`${deficit.toLocaleString('id-ID')} kkal`:'0 kkal');
     set('formula-target',`${Math.round(target||0).toLocaleString('id-ID')} kkal`);
-    set('formula-caption',deficit>0?'Kebutuhan energi harian dikurangi defisit untuk mencapai tujuanmu.':'Target harianmu mengikuti kebutuhan energi untuk mempertahankan kondisi saat ini.');
+    set('formula-caption',deficit>0?`Contoh: TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Untuk mempertahankan kondisi saat ini, target harian mengikuti kebutuhan energi (TDEE).');
     const targetP=Math.max(1,Math.round((target*.30)/4)),targetC=Math.max(1,Math.round((target*.40)/4)),targetF=Math.max(1,Math.round((target*.30)/9));
     set('txt-p',`${summary.p}/${targetP}g`); set('txt-c',`${summary.c}/${targetC}g`); set('txt-f',`${summary.f}/${targetF}g`);
     const bp=document.getElementById('bar-p'),bc=document.getElementById('bar-c'),bf=document.getElementById('bar-f');
