@@ -241,8 +241,8 @@
                     <h2>Halo, <span id="dash-name">Pengguna</span></h2>
                     <p id="dash-story-subtitle">Mari lihat cerita keseimbanganmu hari ini.</p>
                 </div>
-                <div class="health-score">
-                    <svg viewBox="0 0 36 36" class="circular-chart green">
+                <div class="health-score balance-ring-wrap">
+                    <svg viewBox="0 0 36 36" class="circular-chart green balance-ring">
                         <path class="circle-bg"
                             d="M18 2.0845
                             a 15.9155 15.9155 0 0 1 0 31.831
@@ -280,6 +280,20 @@
                         <div class="cal-val" id="dash-cal-out">0</div>
                         <small>Terbakar</small>
                     </div>
+                </div>
+
+                <div class="energy-balance-visual" aria-label="Perbandingan energi masuk dan terbakar">
+                    <div class="energy-balance-row">
+                        <span><i class="energy-dot dot-in"></i> Masuk</span>
+                        <div class="energy-track"><span id="energy-in-fill" class="energy-fill energy-fill-in"></span></div>
+                        <strong id="energy-in-ratio">0%</strong>
+                    </div>
+                    <div class="energy-balance-row">
+                        <span><i class="energy-dot dot-out"></i> Terbakar</span>
+                        <div class="energy-track"><span id="energy-out-fill" class="energy-fill energy-fill-out"></span></div>
+                        <strong id="energy-out-ratio">0%</strong>
+                    </div>
+                    <div class="energy-net-label"><span>⚖️ Keseimbangan energi</span><strong id="energy-net-value">0 kkal net</strong></div>
                 </div>
                 
                 <div class="macros mt-4">
@@ -322,6 +336,12 @@
                 <div class="card-header"><span class="material-symbols-rounded">auto_awesome</span><h3>Cerita Hari Ini</h3></div>
                 <p id="dashboard-story-text" class="text-sm">AI akan membantu menceritakan keseimbangan harimu setelah ada catatan makanan atau aktivitas.</p>
                 <a class="story-more-link" href="#progress"><span>Baca perjalananmu</span><span class="material-symbols-rounded">arrow_forward</span></a>
+            </section>
+
+            <section class="card daily-target-card glass-card">
+                <div class="card-header"><span class="material-symbols-rounded">calculate</span><h3>Rumus Target Harian</h3></div>
+                <div class="daily-target-equation"><strong id="formula-tdee">TDEE</strong><span>−</span><strong id="formula-deficit">Defisit</strong><span>=</span><strong id="formula-target">Target kkal</strong></div>
+                <p id="formula-caption">Kebutuhan energi harian dikurangi defisit sesuai tujuanmu.</p>
             </section>
         </div>
     </template>
