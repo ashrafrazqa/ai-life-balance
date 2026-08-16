@@ -1573,3 +1573,19 @@ html[data-theme="dark"] .daily-target-equation strong { background:rgba(16,185,1
   .progress-stat-card small { font-size:.57rem; }
   .progress-stat-card strong { font-size:.74rem; }
 }
+
+/* MASTER UPDATE V10.1 — clearer Energy Balance and truthful Balance Score */
+.summary-card .cal-circle .main-val { font-size:1.35rem; line-height:1; }
+.summary-card .cal-circle small { max-width:92px; text-align:center; line-height:1.15; }
+.energy-net-label strong.net-warning { color:#dc2626 !important; font-weight:900; }
+html[data-theme="dark"] .energy-net-label strong.net-warning { color:#f87171 !important; }
+.energy-balance-row > strong { text-transform:none; }
+@media(max-width:430px){
+  .summary-card .cal-display { gap:7px; }
+  .summary-card .cal-circle { width:112px; height:112px; }
+  .summary-card .cal-circle .main-val { font-size:1.22rem; }
+  .summary-card .cal-item .cal-val { font-size:1.12rem; }
+  .summary-card .cal-item small { font-size:.68rem; }
+  .energy-balance-row { grid-template-columns:64px 1fr 42px; }
+  .energy-balance-row strong { font-size:.61rem; }
+}

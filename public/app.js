@@ -1172,22 +1172,56 @@ function initOnboarding() {
 
 async function initDashboard() {
     if (!state.profile) return;
-    const p=state.profile, summary=getTodaySummary(), target=Number(p.targetCalorie||0), netCal=summary.calIn-summary.calOut, calLeft=Math.max(0,target-netCal);
+    const p=state.profile, summary=getTodaySummary(), target=Number(p.targetCalorie||0);
+    const netCal=summary.calIn-summary.calOut;
     const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
     set('dash-name',p.name); set('dash-w-current',`${p.weight} kg`); set('dash-w-target',`${p.targetWeight} kg`);
     set('dash-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`); set('dash-target-cal',`${Math.round(target).toLocaleString('id-ID')} kkal`);
-    set('dash-cal-in',summary.calIn); set('dash-cal-out',summary.calOut); set('dash-cal-left',calLeft);
-    const energyMax=Math.max(1,target);
-    const inPct=target>0?(summary.calIn/target)*100:0;
-    const outPct=target>0?(summary.calOut/target)*100:0;
-    const ein=document.getElementById('energy-in-fill'), eout=document.getElementById('energy-out-fill');
-    if(ein){ ein.style.width=`${Math.min(100,inPct)}%`; ein.classList.toggle('over-target-fill',inPct>100); }
-    if(eout){ eout.style.width=`${Math.min(100,outPct)}%`; eout.classList.toggle('over-target-fill',outPct>100); }
-    const inRatio=document.getElementById('energy-in-ratio'), outRatio=document.getElementById('energy-out-ratio');
-    set('energy-in-ratio',`${Math.round(inPct)}%`); set('energy-out-ratio',`${Math.round(outPct)}%`);
-    if(inRatio) inRatio.classList.toggle('over-target-ratio',inPct>100);
-    if(outRatio) outRatio.classList.toggle('over-target-ratio',outPct>100);
-    set('energy-net-value',`${Math.round(netCal).toLocaleString('id-ID')} kkal net`);
+    set('dash-cal-in',Number(summary.calIn||0).toLocaleString('id-ID'));
+    set('dash-cal-out',Number(summary.calOut||0).toLocaleString('id-ID'));
+
+    // V10.1: the center value is about food intake versus the daily intake target.
+    // Activity calories are shown separately so we do not mix two different baselines.
+    const intakePct=target>0?(summary.calIn/target)*100:0;
+    const remaining=target-summary.calIn;
+    const center=document.getElementById('dash-cal-left');
+    const centerLabel=document.getElementById('dash-cal-left-label');
+    if(center){
+        if(summary.calIn<=0){ center.textContent=Math.round(target).toLocaleString('id-ID'); }
+        else if(remaining>=0){ center.textContent=Math.round(remaining).toLocaleString('id-ID'); }
+        else { center.textContent=`+${Math.abs(Math.round(remaining)).toLocaleString('id-ID')}`; }
+    }
+    if(centerLabel) centerLabel.textContent=summary.calIn<=0?'Target Hari Ini':(remaining>=0?'Sisa Asupan':'Melewati Target');
+
+    const inFill=document.getElementById('energy-in-fill');
+    if(inFill){
+        const visualPct=Math.min(100,Math.max(0,intakePct));
+        inFill.style.width=`${visualPct}%`;
+        inFill.classList.toggle('over-target-fill',intakePct>100);
+    }
+    set('energy-in-ratio',`${Math.round(intakePct)}%`);
+    const inRatio=document.getElementById('energy-in-ratio');
+    if(inRatio) inRatio.classList.toggle('over-target-ratio',intakePct>100);
+
+    // Activity has no arbitrary 100% target here. It is an absolute figure,
+    // with the bar scaled only for visual comparison against today's two values.
+    const outFill=document.getElementById('energy-out-fill');
+    const visualMax=Math.max(1,summary.calIn,summary.calOut);
+    if(outFill){
+        outFill.style.width=`${Math.min(100,(summary.calOut/visualMax)*100)}%`;
+        outFill.classList.remove('over-target-fill');
+    }
+    set('energy-out-ratio',summary.calOut>0?'tercatat':'—');
+    const outRatio=document.getElementById('energy-out-ratio');
+    if(outRatio) outRatio.classList.remove('over-target-ratio');
+
+    const netLabel=document.getElementById('energy-net-value');
+    if(netLabel){
+        const sign=netCal>0?'+':'';
+        netLabel.textContent=`${sign}${Math.round(netCal).toLocaleString('id-ID')} kkal net`;
+        netLabel.classList.toggle('net-warning',Math.abs(netCal)>Math.max(500,target*0.35));
+    }
+
     const deficit=Math.max(0,Math.round((p.tdee||0)-(target||0)));
     set('formula-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`);
     set('formula-deficit',deficit>0?`${deficit.toLocaleString('id-ID')} kkal`:'0 kkal');
@@ -1195,35 +1229,45 @@ async function initDashboard() {
     set('formula-caption',deficit>0?`TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Untuk mempertahankan kondisi saat ini, target harian mengikuti kebutuhan energi (TDEE).');
     const formulaOrigin=document.getElementById('formula-origin');
     if(formulaOrigin) formulaOrigin.textContent=deficit>0?`💡 Defisit ${deficit.toLocaleString('id-ID')} kkal/hari digunakan sebagai asumsi awal. Secara teori ${deficit.toLocaleString('id-ID')} × 7 = ${(deficit*7).toLocaleString('id-ID')} kkal/minggu; perubahan nyata dapat berbeda.`:'💡 Karena tujuanmu mempertahankan kondisi, tidak ada pengurangan defisit otomatis dari TDEE.';
+
     const targetP=Math.max(1,Math.round((target*.30)/4)),targetC=Math.max(1,Math.round((target*.40)/4)),targetF=Math.max(1,Math.round((target*.30)/9));
     set('txt-p',`${summary.p}/${targetP}g`); set('txt-c',`${summary.c}/${targetC}g`); set('txt-f',`${summary.f}/${targetF}g`);
     const bp=document.getElementById('bar-p'),bc=document.getElementById('bar-c'),bf=document.getElementById('bar-f');
     if(bp)bp.style.width=`${Math.min(100,(summary.p/targetP)*100)}%`; if(bc)bc.style.width=`${Math.min(100,(summary.c/targetC)*100)}%`; if(bf)bf.style.width=`${Math.min(100,(summary.f/targetF)*100)}%`;
-    let score=0, scoreNote='Belum ada catatan hari ini', scoreState='empty';
-    if(summary.calIn>0 && summary.calOut>0){
-        const deviation=Math.abs(netCal-target)/Math.max(target,1);
-        score=Math.max(0,Math.min(100,Math.round(100-(deviation*100*1.25))));
-        scoreNote=netCal>target?'Perlu penyesuaian':'Cukup seimbang';
-        scoreState=netCal>target?'warning':'good';
+
+    // V10.1: no fake score while data is incomplete. With both inputs present,
+    // the score reflects how close food intake is to the daily target; activity is context, not a reward for burning more calories.
+    let score=null, scoreNote='Belum dinilai', scoreState='empty';
+    if(summary.calIn>0 && summary.calOut>0 && target>0){
+        const ratio=summary.calIn/target;
+        let raw=100;
+        if(ratio<0.70) raw=55+(ratio/0.70)*20;
+        else if(ratio<0.90) raw=75+(ratio-0.70)/0.20*15;
+        else if(ratio<=1.05) raw=100;
+        else raw=100-Math.min(70,(ratio-1.05)*100);
+        score=Math.max(30,Math.min(100,Math.round(raw)));
+        if(ratio>1.20){scoreNote='Asupan melewati target';scoreState='warning';}
+        else if(ratio<0.70){scoreNote='Asupan cukup rendah';scoreState='partial';}
+        else if(ratio<0.90){scoreNote='Sedikit di bawah target';scoreState='good';}
+        else if(ratio<=1.05){scoreNote='Dalam kisaran target';scoreState='good';}
+        else {scoreNote='Sedikit di atas target';scoreState='warning';}
     } else if(summary.calIn>0){
-        const intakeRatio=summary.calIn/Math.max(target,1);
-        score=Math.max(35,Math.min(85,Math.round(80-Math.max(0,intakeRatio-1)*50)));
-        scoreNote=summary.calIn>target?'Asupan melewati target':'Aktivitas belum dicatat';
-        scoreState=summary.calIn>target?'warning':'partial';
+        score=null; scoreNote=summary.calIn>target?'Asupan melewati target':'Aktivitas belum dicatat'; scoreState=summary.calIn>target?'warning':'partial';
     } else if(summary.calOut>0){
-        const activityRatio=summary.calOut/Math.max(target,1);
-        score=Math.max(30,Math.min(80,Math.round(55+Math.min(activityRatio,.5)*30)));
-        scoreNote='Makanan belum dicatat';
-        scoreState='partial';
+        score=null; scoreNote='Makanan belum dicatat'; scoreState='partial';
     }
-    set('dash-score',score);set('balance-score-note',scoreNote);
-    const circle=document.getElementById('score-circle');if(circle){circle.style.strokeDasharray=`${score},100`;circle.classList.remove('score-good','score-warning','score-partial');if(scoreState!=='empty')circle.classList.add(`score-${scoreState}`);}
+    set('dash-score',score===null?'—':score); set('balance-score-note',scoreNote);
+    const circle=document.getElementById('score-circle');
+    if(circle){circle.style.strokeDasharray=`${score===null?0:score}, 100`;circle.classList.remove('score-good','score-warning','score-partial');if(scoreState!=='empty')circle.classList.add(`score-${scoreState}`);}
+
     renderProgressChart();
     const story=document.getElementById('dashboard-story-text');
     if(story){
         if(!summary.calIn && !summary.calOut) story.textContent='Hari ini baru dimulai. Catat makanan atau aktivitas pertamamu agar AI bisa mulai membaca keseimbanganmu.';
-        else if(netCal<=target) story.textContent=`Hari ini kamu sudah menjaga keseimbangan dengan cukup baik. Energi bersihmu ${Math.round(netCal).toLocaleString('id-ID')} kkal dari target ${Math.round(target).toLocaleString('id-ID')} kkal.`;
-        else story.textContent=`Hari ini energi masukmu sedikit lebih tinggi dari target. Jangan khawatir—lihat pola harianmu dan lanjutkan dengan pilihan yang lebih seimbang.`;
+        else if(summary.calIn>target) story.textContent=`Asupanmu sudah ${Math.round(intakePct)}% dari target. Fokus pada pola makan berikutnya dan gunakan aktivitas sebagai konteks, bukan untuk “membayar” makanan.`;
+        else if(summary.calIn>0 && summary.calOut===0) story.textContent=`Asupanmu baru ${Math.round(intakePct)}% dari target. Catat aktivitas juga agar gambaran harianmu lebih lengkap.`;
+        else if(summary.calIn===0 && summary.calOut>0) story.textContent=`Aktivitas ${Math.round(summary.calOut).toLocaleString('id-ID')} kkal sudah tercatat, tetapi makanan belum dicatat. Balance Score belum dinilai.`;
+        else story.textContent=`Asupanmu ${Math.round(intakePct)}% dari target dan aktivitas sudah tercatat. Lihat pola hari ini sebagai satu kesatuan, bukan hanya satu angka.`;
     }
     maybeShowDailyAlert(summary);
 }
