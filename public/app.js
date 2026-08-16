@@ -11,12 +11,14 @@ const defaultState = {
     activities: [], // { id, date, name, cal }
     chatHistory: [],
     insightCache: {},
+    mealPlanCache: {},
     weightHistory: [],
     dateLastOpened: new Date().toISOString().split('T')[0]
 };
 
 let state = JSON.parse(localStorage.getItem(STATE_KEY)) || defaultState;
 state.insightCache = state.insightCache || {};
+state.mealPlanCache = state.mealPlanCache || {};
 state.weightHistory = state.weightHistory || [];
 
 function saveState() {
@@ -166,6 +168,8 @@ function maybeShowDailyAlert(summary) {
         payload = ['info', 'Belum ada catatan hari ini', 'AI Life Balance belum bisa membaca progress hari ini. Yuk catat makanan atau aktivitas pertamamu.'];
     } else if (hour >= 12 && summary.calIn > state.profile.targetCalorie) {
         payload = ['warning', 'Kalori harian sudah terlampaui', `Asupanmu sudah ${summary.calIn.toLocaleString('id-ID')} kkal, melewati target ${state.profile.targetCalorie.toLocaleString('id-ID')} kkal. Kamu masih bisa mencatat aktivitas dan memilih asupan berikutnya dengan lebih bijak.`];
+    } else if (hour >= 12 && summary.calIn === 0 && summary.calOut > 0) {
+        payload = ['info', 'Makanan belum dicatat', `Aktivitasmu sudah tercatat ${summary.calOut.toLocaleString('id-ID')} kkal, tetapi belum ada catatan makanan. Balance Score masih bersifat sementara.`];
     }
     if (payload) {
         showAppAlert(...payload);
@@ -1173,24 +1177,47 @@ async function initDashboard() {
     set('dash-name',p.name); set('dash-w-current',`${p.weight} kg`); set('dash-w-target',`${p.targetWeight} kg`);
     set('dash-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`); set('dash-target-cal',`${Math.round(target).toLocaleString('id-ID')} kkal`);
     set('dash-cal-in',summary.calIn); set('dash-cal-out',summary.calOut); set('dash-cal-left',calLeft);
-    const energyMax=Math.max(1,target,summary.calIn,summary.calOut);
+    const energyMax=Math.max(1,target);
+    const inPct=target>0?(summary.calIn/target)*100:0;
+    const outPct=target>0?(summary.calOut/target)*100:0;
     const ein=document.getElementById('energy-in-fill'), eout=document.getElementById('energy-out-fill');
-    if(ein) ein.style.width=`${Math.min(100,(summary.calIn/energyMax)*100)}%`;
-    if(eout) eout.style.width=`${Math.min(100,(summary.calOut/energyMax)*100)}%`;
-    set('energy-in-ratio',`${Math.round((summary.calIn/energyMax)*100)}%`);
-    set('energy-out-ratio',`${Math.round((summary.calOut/energyMax)*100)}%`);
+    if(ein){ ein.style.width=`${Math.min(100,inPct)}%`; ein.classList.toggle('over-target-fill',inPct>100); }
+    if(eout){ eout.style.width=`${Math.min(100,outPct)}%`; eout.classList.toggle('over-target-fill',outPct>100); }
+    const inRatio=document.getElementById('energy-in-ratio'), outRatio=document.getElementById('energy-out-ratio');
+    set('energy-in-ratio',`${Math.round(inPct)}%`); set('energy-out-ratio',`${Math.round(outPct)}%`);
+    if(inRatio) inRatio.classList.toggle('over-target-ratio',inPct>100);
+    if(outRatio) outRatio.classList.toggle('over-target-ratio',outPct>100);
     set('energy-net-value',`${Math.round(netCal).toLocaleString('id-ID')} kkal net`);
     const deficit=Math.max(0,Math.round((p.tdee||0)-(target||0)));
     set('formula-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`);
     set('formula-deficit',deficit>0?`${deficit.toLocaleString('id-ID')} kkal`:'0 kkal');
     set('formula-target',`${Math.round(target||0).toLocaleString('id-ID')} kkal`);
-    set('formula-caption',deficit>0?`Contoh: TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Untuk mempertahankan kondisi saat ini, target harian mengikuti kebutuhan energi (TDEE).');
+    set('formula-caption',deficit>0?`TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Untuk mempertahankan kondisi saat ini, target harian mengikuti kebutuhan energi (TDEE).');
+    const formulaOrigin=document.getElementById('formula-origin');
+    if(formulaOrigin) formulaOrigin.textContent=deficit>0?`💡 Defisit ${deficit.toLocaleString('id-ID')} kkal/hari digunakan sebagai asumsi awal. Secara teori ${deficit.toLocaleString('id-ID')} × 7 = ${(deficit*7).toLocaleString('id-ID')} kkal/minggu; perubahan nyata dapat berbeda.`:'💡 Karena tujuanmu mempertahankan kondisi, tidak ada pengurangan defisit otomatis dari TDEE.';
     const targetP=Math.max(1,Math.round((target*.30)/4)),targetC=Math.max(1,Math.round((target*.40)/4)),targetF=Math.max(1,Math.round((target*.30)/9));
     set('txt-p',`${summary.p}/${targetP}g`); set('txt-c',`${summary.c}/${targetC}g`); set('txt-f',`${summary.f}/${targetF}g`);
     const bp=document.getElementById('bar-p'),bc=document.getElementById('bar-c'),bf=document.getElementById('bar-f');
     if(bp)bp.style.width=`${Math.min(100,(summary.p/targetP)*100)}%`; if(bc)bc.style.width=`${Math.min(100,(summary.c/targetC)*100)}%`; if(bf)bf.style.width=`${Math.min(100,(summary.f/targetF)*100)}%`;
-    let score=100;if(!summary.calIn&&!summary.calOut)score=0;else{if(!summary.calIn)score-=35;if(netCal>target+Math.max(200,target*.1))score-=25;else if(netCal>target)score-=12;if(summary.calOut>0)score+=5;if(summary.calOut>=250)score+=5;}score=Math.max(0,Math.min(100,Math.round(score)));
-    set('dash-score',score);set('balance-score-note',score===0?'Belum ada catatan hari ini':'Indikator keseimbangan harian');const circle=document.getElementById('score-circle');if(circle)circle.style.strokeDasharray=`${score},100`;
+    let score=0, scoreNote='Belum ada catatan hari ini', scoreState='empty';
+    if(summary.calIn>0 && summary.calOut>0){
+        const deviation=Math.abs(netCal-target)/Math.max(target,1);
+        score=Math.max(0,Math.min(100,Math.round(100-(deviation*100*1.25))));
+        scoreNote=netCal>target?'Perlu penyesuaian':'Cukup seimbang';
+        scoreState=netCal>target?'warning':'good';
+    } else if(summary.calIn>0){
+        const intakeRatio=summary.calIn/Math.max(target,1);
+        score=Math.max(35,Math.min(85,Math.round(80-Math.max(0,intakeRatio-1)*50)));
+        scoreNote=summary.calIn>target?'Asupan melewati target':'Aktivitas belum dicatat';
+        scoreState=summary.calIn>target?'warning':'partial';
+    } else if(summary.calOut>0){
+        const activityRatio=summary.calOut/Math.max(target,1);
+        score=Math.max(30,Math.min(80,Math.round(55+Math.min(activityRatio,.5)*30)));
+        scoreNote='Makanan belum dicatat';
+        scoreState='partial';
+    }
+    set('dash-score',score);set('balance-score-note',scoreNote);
+    const circle=document.getElementById('score-circle');if(circle){circle.style.strokeDasharray=`${score},100`;circle.classList.remove('score-good','score-warning','score-partial');if(scoreState!=='empty')circle.classList.add(`score-${scoreState}`);}
     renderProgressChart();
     const story=document.getElementById('dashboard-story-text');
     if(story){
@@ -1252,20 +1279,29 @@ async function generateDashboardInsight({force=false,cacheKey,summary,netCal,ins
     finally{if(refreshBtn){refreshBtn.disabled=false;refreshBtn.innerHTML='<span class="material-symbols-rounded">refresh</span> Perbarui';}}
 }
 
-async function loadMealPlanner(){
+async function loadMealPlanner(force=false){
     const container=document.getElementById('meal-plan-container'); if(!container||!state.profile)return;
     const target=Number(state.profile.targetCalorie||0), summary=getTodaySummary(), remaining=Math.max(0,target-(summary.calIn-summary.calOut));
+    const cacheKey=`${getTodayString()}|${Math.round(target)}|${summary.calIn}|${summary.calOut}|${state.profile.goal}|${state.profile.weight}|${state.profile.targetWeight}`;
+    state.mealPlanCache=state.mealPlanCache||{};
+    const cached=state.mealPlanCache[cacheKey];
+    const renderData=(data,fromCache=false)=>{
+        const labels=[['breakfast','Sarapan'],['lunch','Makan Siang'],['dinner','Makan Malam'],['snack','Snack']];
+        container.innerHTML=`<div class="ai-result-badge"><span class="material-symbols-rounded">${fromCache?'inventory_2':'auto_awesome'}</span> ${fromCache?'Tersimpan di perangkat':'Dibuat AI'}</div>`+labels.map(([k,l])=>data[k]?`<div class="meal-slot"><h4>${l} (~${Math.round(Number(data[k].cal)||0)} kkal)</h4><p><strong>${data[k].name||''}</strong><br>${data[k].detail||''}</p></div>`:'').join('');
+    };
+    if(cached && !force){ renderData(cached.data,true); return; }
     container.innerHTML='<div class="planner-loading"><span class="material-symbols-rounded spin">auto_awesome</span><span>AI sedang menyiapkan menu…</span></div>';
     try{
         const prompt=`Buat rencana makan sehari personal untuk AI Life Balance. Target ${target} kkal. Sudah masuk ${summary.calIn} kkal dan aktivitas ${summary.calOut} kkal, sehingga sisa panduan energi sekitar ${remaining} kkal. Tujuan ${getGoalLabel(state.profile.goal)}. Berat ${state.profile.weight} kg, target ${state.profile.targetWeight} kg. Berikan 4 bagian breakfast,lunch,dinner,snack. Kembalikan JSON murni dengan cal angka yang masuk akal dan berbeda sesuai jenis makanan, name, detail. Total seluruh cal tidak boleh melebihi ${Math.max(target,remaining)} kkal dan jangan membuat semua menu sama. Gunakan Bahasa Indonesia. Jangan markdown.`;
         const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});
         const data=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));
-        const labels=[['breakfast','Sarapan'],['lunch','Makan Siang'],['dinner','Makan Malam'],['snack','Snack']];
-        container.innerHTML='<div class="ai-result-badge"><span class="material-symbols-rounded">auto_awesome</span> Dibuat AI</div>'+labels.map(([k,l])=>data[k]?`<div class="meal-slot"><h4>${l} (~${Math.round(Number(data[k].cal)||0)} kkal)</h4><p><strong>${data[k].name||''}</strong><br>${data[k].detail||''}</p></div>`:'').join('');
+        state.mealPlanCache[cacheKey]={data,createdAt:Date.now()};
+        const entries=Object.entries(state.mealPlanCache).sort((a,b)=>(b[1]?.createdAt||0)-(a[1]?.createdAt||0)); state.mealPlanCache=Object.fromEntries(entries.slice(0,10));
+        saveState(); renderData(data,false);
     }catch(err){
         console.warn('Meal Planner AI fallback',err);
         const b=Math.max(250,Math.round(remaining*.25)),l=Math.max(300,Math.round(remaining*.35)),d=Math.max(250,Math.round(remaining*.30)),s=Math.max(100,remaining-b-l-d);
-        container.innerHTML='<div class="fallback-badge">Panduan contoh — AI belum tersedia</div>'+`<div class="meal-slot"><h4>Sarapan (~${b} kkal)</h4><p>Oatmeal, buah, dan telur sebagai contoh kombinasi seimbang.</p></div><div class="meal-slot"><h4>Makan Siang (~${l} kkal)</h4><p>Nasi secukupnya, ayam/ikan, sayuran, dan buah.</p></div><div class="meal-slot"><h4>Makan Malam (~${d} kkal)</h4><p>Protein tanpa banyak lemak, sayuran, dan karbohidrat secukupnya.</p></div><div class="meal-slot"><h4>Snack (~${s} kkal)</h4><p>Contoh: yogurt, buah, atau camilan sederhana sesuai sisa energi.</p></div>`;
+        renderData({breakfast:{name:'Oatmeal, buah, dan telur',cal:b,detail:'Contoh kombinasi seimbang.'},lunch:{name:'Nasi, ayam/ikan, dan sayuran',cal:l,detail:'Porsi secukupnya.'},dinner:{name:'Protein dan sayuran',cal:d,detail:'Pilih cara masak rendah minyak.'},snack:{name:'Yogurt atau buah',cal:s,detail:'Sesuaikan dengan sisa energi.'}},false);
     }
 }
 
@@ -1277,7 +1313,7 @@ function initScan(){
     const analyzeImage=async(base64)=>{const prompt=`Analisis foto makanan. Identifikasi makanan dan perkiraan porsinya dari gambar. Kembalikan JSON murni persis: {"name":"","cal":0,"p":0,"c":0,"f":0}. Kalori dan makro harus berupa estimasi yang masuk akal berdasarkan makanan dan porsi yang terlihat, jangan gunakan angka default yang sama untuk semua makanan. Jika bukan makanan, gunakan name "Bukan Makanan" dan semua angka 0. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{inlineData:{mimeType:'image/jpeg',data:base64}},{text:prompt}]}]});return parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));};
     btnCapture?.addEventListener('click',async()=>{if(!video.videoWidth)return;canvas.width=Math.min(video.videoWidth,1280);canvas.height=Math.round(video.videoHeight*(canvas.width/video.videoWidth));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);const dataUrl=canvas.toDataURL('image/jpeg',0.72),base64=dataUrl.split(',')[1];wrapper.style.display='none';res.style.display='block';det.style.display='none';load.style.display='block';try{showResult(await analyzeImage(base64));}catch(err){alert(`Gagal menganalisis gambar.\n\n${err.message||'Kesalahan tidak diketahui.'}`);wrapper.style.display='block';res.style.display='none';}});
     const manual=document.getElementById('manual-food-input'), manualBtn=document.getElementById('btn-manual-food');
-    const analyzeManual=async()=>{const val=manual?.value.trim();if(!val){showAppAlert('warning','Makanan belum diisi','Ketik nama makanan atau minuman terlebih dahulu sebelum dianalisis.');manual?.focus();return;}manualBtn.disabled=true;manualBtn.innerHTML='<span class="material-symbols-rounded spin">sync</span> AI…';wrapper.style.display='none';res.style.display='block';det.style.display='none';load.style.display='block';try{const prompt=`Kamu adalah AI Food Scanner. Analisis makanan yang diketik pengguna: "${val}". Jika porsi disebutkan, gunakan porsi tersebut. Jika porsi tidak disebutkan, nyatakan estimasi berdasarkan porsi standar dan tetap beri angka. Kembalikan JSON murni: {"name":"","cal":0,"p":0,"c":0,"f":0,"portion":""}. Estimasikan kalori dan makro berdasarkan jenis makanan, bahan, cara masak, dan porsi. Jangan gunakan angka default yang sama untuk semua makanan. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});showResult(parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')));manual.value='';}catch(err){wrapper.style.display='block';res.style.display='none';alert(`Gagal menganalisis makanan.\n\n${err.message||'Kesalahan tidak diketahui.'}`);}finally{manualBtn.disabled=false;manualBtn.innerHTML='<span class="material-symbols-rounded">auto_awesome</span> Analisis dengan AI';}};
+    const analyzeManual=async()=>{const val=manual?.value.trim();if(!val){showAppAlert('warning','Makanan belum diisi','Ketik nama makanan atau minuman terlebih dahulu sebelum dianalisis.');manual?.focus();return;}manualBtn.disabled=true;manualBtn.innerHTML='<span class="material-symbols-rounded spin">sync</span>';wrapper.style.display='none';res.style.display='block';det.style.display='none';load.style.display='block';try{const prompt=`Kamu adalah AI Food Scanner. Analisis makanan yang diketik pengguna: "${val}". Jika porsi disebutkan, gunakan porsi tersebut. Jika porsi tidak disebutkan, nyatakan estimasi berdasarkan porsi standar dan tetap beri angka. Kembalikan JSON murni: {"name":"","cal":0,"p":0,"c":0,"f":0,"portion":""}. Estimasikan kalori dan makro berdasarkan jenis makanan, bahan, cara masak, dan porsi. Jangan gunakan angka default yang sama untuk semua makanan. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});showResult(parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')));manual.value='';}catch(err){wrapper.style.display='block';res.style.display='none';alert(`Gagal menganalisis makanan.\n\n${err.message||'Kesalahan tidak diketahui.'}`);}finally{manualBtn.disabled=false;manualBtn.innerHTML='<span class="material-symbols-rounded">auto_awesome</span> Analisis dengan AI';}};
     manual?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();analyzeManual();}}); manualBtn?.addEventListener('click',analyzeManual);
     document.getElementById('btn-save-food')?.addEventListener('click',()=>{const item={id:Date.now(),date:getTodayString(),name:document.getElementById('res-food-name').value,cal:Number(document.getElementById('res-food-cal').value)||0,p:Number(document.getElementById('res-p').value)||0,c:Number(document.getElementById('res-c').value)||0,f:Number(document.getElementById('res-f').value)||0};state.diary.push(item);invalidateInsightCache();saveState();manual.value='';window.location.hash='#dashboard';});
     document.getElementById('btn-cancel-food')?.addEventListener('click',()=>{res.style.display='none';det.style.display='none';load.style.display='block';wrapper.style.display='block';manual.value='';});
@@ -1287,6 +1323,10 @@ function initScan(){
 function initFood(){
     const tabBtns=document.querySelectorAll('.food-view .tab-btn'), contents=document.querySelectorAll('.food-view .tab-content');
     tabBtns.forEach(btn=>{btn.addEventListener('click',()=>{tabBtns.forEach(b=>b.classList.remove('active'));contents.forEach(c=>c.style.display='none');btn.classList.add('active');const target=document.getElementById(`tab-${btn.dataset.tab}`);if(target)target.style.display='block';if(btn.dataset.tab==='planner')loadMealPlanner();if(btn.dataset.tab==='history')renderFoodHistoryMaster();});});
+    document.getElementById('btn-refresh-meal-plan')?.addEventListener('click',()=>loadMealPlanner(true));
+    const pantryInput=document.getElementById('pantry-input'), pantryBtn=document.getElementById('btn-pantry');
+    const makePantryMenu=async()=>{const input=pantryInput?.value.trim();if(!input){showAppAlert('warning','Bahan belum diisi','Ketik minimal satu bahan makanan terlebih dahulu.');pantryInput?.focus();return;}pantryBtn.disabled=true;pantryBtn.innerHTML='<span class="material-symbols-rounded spin">sync</span>';try{const target=Number(state.profile.targetCalorie||0);const prompt=`Saya punya bahan makanan: ${input}. Buat 1 menu sehat yang cocok untuk tujuan ${getGoalLabel(state.profile.goal)} dengan target harian ${target} kkal. Kembalikan JSON murni {"name":"","cal":0,"detail":""}. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});const data=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));const container=document.getElementById('meal-plan-container');if(container)container.innerHTML=`<div class="ai-result-badge"><span class="material-symbols-rounded">kitchen</span> Smart Pantry</div><div class="meal-slot"><h4>${data.name||input} (~${Math.round(Number(data.cal)||0)} kkal)</h4><p>${data.detail||'Gunakan bahan dengan porsi seimbang dan cara masak secukupnya.'}</p></div>`;}catch(err){const container=document.getElementById('meal-plan-container');if(container)container.innerHTML=`<div class="meal-slot"><h4>Smart Pantry</h4><p><strong>${input}</strong><br>Gunakan bahan tersebut dengan porsi seimbang dan tambahkan sayuran atau sumber protein bila belum ada.</p></div>`;}finally{pantryBtn.disabled=false;pantryBtn.innerHTML='<span class="material-symbols-rounded">auto_awesome</span> Buat Menu';}};
+    pantryInput?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();makePantryMenu();}});pantryBtn?.addEventListener('click',makePantryMenu);
     const list=document.getElementById('food-list'); const diary=getTodayDiary(); if(list)list.innerHTML=diary.length?diary.map(x=>`<div class="list-item"><div class="item-info"><h4>${x.name}</h4><span class="text-sm">${x.p||0}g P • ${x.c||0}g C • ${x.f||0}g L</span></div><div class="item-cal">${x.cal} Kkal</div></div>`).join(''):'<p class="empty-state">Belum ada makanan yang dicatat hari ini.</p>';
 }
 function renderFoodHistoryMaster(){const s=document.getElementById('food-history-summary'),h=document.getElementById('food-history-list');if(!s||!h)return;const groups=getDateGroups(state.diary),total=state.diary.reduce((a,x)=>a+Number(x.cal||0),0);s.innerHTML=`<div class="history-stat"><strong>${state.diary.length}</strong><span>catatan</span></div><div class="history-stat"><strong>${total.toLocaleString('id-ID')}</strong><span>kkal total</span></div><div class="history-stat"><strong>${groups.length}</strong><span>hari</span></div>`;h.innerHTML=groups.length?groups.slice(0,30).map(([date,items])=>`<div class="history-day"><div class="history-day-head"><strong>${formatDateId(date)}</strong><span>${items.reduce((a,x)=>a+Number(x.cal||0),0).toLocaleString('id-ID')} Kkal</span></div>${items.map(x=>`<div class="history-row"><div><strong>${x.name}</strong><small>${x.p||0}g P • ${x.c||0}g C • ${x.f||0}g L</small></div><span>${x.cal} Kkal</span></div>`).join('')}</div>`).join(''):'<p class="empty-state">Belum ada riwayat makanan.</p>';}
@@ -1297,7 +1337,7 @@ function initActivity(){
     renderList();renderHistory();
     document.querySelectorAll('.activity-tabs .tab-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.activity-tabs .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const h=btn.dataset.activityTab==='history';document.getElementById('activity-today-panel').style.display=h?'none':'block';document.getElementById('activity-history-panel').style.display=h?'block':'none';if(h)renderHistory();}));
     const input=document.getElementById('act-input'),button=document.getElementById('btn-save-act');
-    const saveActivity=async()=>{const text=input?.value.trim();if(!text){showAppAlert('warning','Aktivitas belum diisi','Ketik aktivitas dan durasinya terlebih dahulu sebelum dianalisis.');input?.focus();return;}button.disabled=true;button.innerHTML='<span class="material-symbols-rounded spin">sync</span><span class="btn-label-loading">Menghitung…</span>';const local=estimateActivityCalories(text,state.profile.weight);let est=local;try{const prompt=`Kamu adalah AI Activity Tracker. Analisis aktivitas: "${text}". Berat pengguna ${state.profile.weight} kg. Kembalikan JSON murni {"cal":number,"minutes":number,"met":number,"activity":"string"}. Gunakan jenis aktivitas, durasi, intensitas yang disebutkan. Jika durasi tidak disebutkan gunakan 30 menit. Hitung secara konservatif dan realistis; jangan gunakan angka 200 sebagai default. Kalori harus berbeda sesuai aktivitas/durasi/berat. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});const ai=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));if(Number(ai.cal)>0)est={cal:Math.round(Number(ai.cal)),minutes:Number(ai.minutes)||local.minutes,met:Number(ai.met)||local.met,label:ai.activity||local.label};}catch(err){console.warn('Activity AI fallback:',err);}state.activities.push({id:Date.now(),date:getTodayString(),name:text,cal:est.cal,minutes:est.minutes,met:est.met,source:'ai-or-fallback'});invalidateInsightCache();saveState();input.value='';button.disabled=false;button.innerHTML='<span class="material-symbols-rounded">send</span>';renderList();renderHistory();};
+    const saveActivity=async()=>{const text=input?.value.trim();if(!text){showAppAlert('warning','Aktivitas belum diisi','Ketik aktivitas dan durasinya terlebih dahulu sebelum dianalisis.');input?.focus();return;}button.disabled=true;button.innerHTML='<span class="material-symbols-rounded spin">sync</span>';const local=estimateActivityCalories(text,state.profile.weight);let est=local;try{const prompt=`Kamu adalah AI Activity Tracker. Analisis aktivitas: "${text}". Berat pengguna ${state.profile.weight} kg. Kembalikan JSON murni {"cal":number,"minutes":number,"met":number,"activity":"string"}. Gunakan jenis aktivitas, durasi, intensitas yang disebutkan. Jika durasi tidak disebutkan gunakan 30 menit. Hitung secara konservatif dan realistis; jangan gunakan angka 200 sebagai default. Kalori harus berbeda sesuai aktivitas/durasi/berat. Jangan markdown.`;const result=await callGeminiAPI({contents:[{parts:[{text:prompt}]}]});const ai=parseAIJson(result?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''));if(Number(ai.cal)>0)est={cal:Math.round(Number(ai.cal)),minutes:Number(ai.minutes)||local.minutes,met:Number(ai.met)||local.met,label:ai.activity||local.label};}catch(err){console.warn('Activity AI fallback:',err);}state.activities.push({id:Date.now(),date:getTodayString(),name:text,cal:est.cal,minutes:est.minutes,met:est.met,source:'ai-or-fallback'});invalidateInsightCache();saveState();input.value='';button.disabled=false;button.innerHTML='<span class="material-symbols-rounded">send</span>';renderList();renderHistory();};
     input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveActivity();}});button?.addEventListener('click',saveActivity);
 }
 
