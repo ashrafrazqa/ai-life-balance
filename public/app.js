@@ -276,7 +276,14 @@ function navigate(hash) {
         viewContainer.innerHTML = '';
         viewContainer.appendChild(template.content.cloneNode(true));
         
-        // Update Bottom Nav
+        // Bottom Navigation + AI Coach: show together only after the user's profile is saved.
+        // Keep both hidden on onboarding/starting-point so the first-time input screen stays clean.
+        const globalCoachFab = document.getElementById('coach-fab');
+        if (viewName === 'onboarding' || viewName === 'starting-point' || !state.profile) {
+            if (globalCoachFab) globalCoachFab.classList.add('dashboard-hidden');
+        } else {
+            if (globalCoachFab) globalCoachFab.classList.remove('dashboard-hidden');
+        }
         if (viewName === 'onboarding') {
             bottomNav.style.display = 'none';
         } else {
@@ -1226,9 +1233,9 @@ async function initDashboard() {
     set('formula-tdee',`${Math.round(p.tdee||0).toLocaleString('id-ID')} kkal`);
     set('formula-deficit',deficit>0?`${deficit.toLocaleString('id-ID')} kkal`:'0 kkal');
     set('formula-target',`${Math.round(target||0).toLocaleString('id-ID')} kkal`);
-    set('formula-caption',deficit>0?`TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Untuk mempertahankan kondisi saat ini, target harian mengikuti kebutuhan energi (TDEE).');
+    set('formula-caption',deficit>0?`TDEE ${Math.round(p.tdee||0).toLocaleString('id-ID')} − defisit ${deficit.toLocaleString('id-ID')} = target makan ${Math.round(target||0).toLocaleString('id-ID')} kkal/hari.`:'Target makan harian mengikuti kebutuhan energi (TDEE) karena tujuanmu bukan mengurangi asupan.');
     const formulaOrigin=document.getElementById('formula-origin');
-    if(formulaOrigin) formulaOrigin.textContent=deficit>0?`💡 Defisit ${deficit.toLocaleString('id-ID')} kkal/hari digunakan sebagai asumsi awal. Secara teori ${deficit.toLocaleString('id-ID')} × 7 = ${(deficit*7).toLocaleString('id-ID')} kkal/minggu; perubahan nyata dapat berbeda.`:'💡 Karena tujuanmu mempertahankan kondisi, tidak ada pengurangan defisit otomatis dari TDEE.';
+    if(formulaOrigin) formulaOrigin.textContent=deficit>0?`💡 Defisit ${deficit.toLocaleString('id-ID')} kkal/hari adalah asumsi awal untuk tujuan penurunan berat. Secara teori ${deficit.toLocaleString('id-ID')} × 7 = ${(deficit*7).toLocaleString('id-ID')} kkal/minggu; perubahan nyata dapat berbeda.`:'💡 Tidak ada pengurangan defisit otomatis dari TDEE untuk tujuan ini.';
 
     const targetP=Math.max(1,Math.round((target*.30)/4)),targetC=Math.max(1,Math.round((target*.40)/4)),targetF=Math.max(1,Math.round((target*.30)/9));
     set('txt-p',`${summary.p}/${targetP}g`); set('txt-c',`${summary.c}/${targetC}g`); set('txt-f',`${summary.f}/${targetF}g`);
@@ -1403,8 +1410,18 @@ function navigate(hash){
     const template=document.getElementById(`tpl-${viewName}`);if(!template)return;
     viewContainer.innerHTML='';viewContainer.appendChild(template.content.cloneNode(true));
     const isOnboarding=viewName==='onboarding';
-    const hideBottomNav=isOnboarding||viewName==='starting-point'; bottomNav.classList.toggle('nav-hidden',hideBottomNav); bottomNav.style.display=hideBottomNav?'none':'flex';
-    const coachFab=document.getElementById('coach-fab'); if(coachFab){ const hideCoach=hideBottomNav || viewName==='about' || viewName==='coach'; coachFab.classList.toggle('hidden',hideCoach); if(!hideCoach) document.getElementById('app')?.appendChild(coachFab); }
+    const isStartingPoint=viewName==='starting-point';
+    const hideBottomNav=isOnboarding||isStartingPoint;
+    bottomNav.classList.toggle('nav-hidden',hideBottomNav);
+    bottomNav.style.display=hideBottomNav?'none':'flex';
+
+    // AI Coach must appear at exactly the same moment as the bottom navigation:
+    // never during onboarding or Starting Point, even though state.profile is already
+    // created before Starting Point is shown.
+    const globalCoachFab=document.getElementById('coach-fab');
+    const hideCoach=isOnboarding||isStartingPoint||!state.profile;
+    if(globalCoachFab) globalCoachFab.classList.toggle('dashboard-hidden',hideCoach);
+
     document.querySelectorAll('.nav-item').forEach(el=>{el.classList.toggle('active',el.dataset.target===viewName);});
     if(viewName==='onboarding')initOnboarding(); else if(viewName==='starting-point')initStartingPoint(); else if(viewName==='dashboard')initDashboard(); else if(viewName==='food')initFood(); else if(viewName==='scan')initScan(); else if(viewName==='activity')initActivity(); else if(viewName==='coach')initCoach(); else if(viewName==='settings')initSettings(); else if(viewName==='progress')initProgress(); else if(viewName==='about')initAbout();
 }

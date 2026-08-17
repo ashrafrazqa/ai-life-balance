@@ -1589,3 +1589,83 @@ html[data-theme="dark"] .energy-net-label strong.net-warning { color:#f87171 !im
   .energy-balance-row { grid-template-columns:64px 1fr 42px; }
   .energy-balance-row strong { font-size:.61rem; }
 }
+
+
+/* MASTER UPDATE V10.2 — focused dashboard, storytelling preserved, clearer target calculation */
+.dashboard-view { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+.dashboard-view .top-header { align-items:center; gap:8px; }
+.dashboard-view .top-header .user-info { flex:1; min-width:0; padding-right:0; }
+.dashboard-view .top-header .user-info p { font-size:.78rem; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px; }
+.dashboard-view .balance-ring-wrap { flex:0 0 auto; }
+.dashboard-coach-link { position:relative; width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border-radius:13px; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(79,70,229,.22); order:2; }
+.dashboard-coach-link .material-symbols-rounded { font-size:21px; }
+.dashboard-coach-link .coach-fab-badge { position:absolute; right:-4px; bottom:-4px; min-width:17px; height:17px; padding:0 4px; display:grid; place-items:center; border-radius:999px; background:#10b981; color:#fff; border:2px solid var(--theme-bg,#f8fafc); font-size:.48rem; font-weight:900; }
+.dashboard-view .balance-ring-wrap { order:3; }
+.coach-fab.dashboard-hidden { display:none !important; }
+.dashboard-view .summary-card { margin-bottom:.65rem; }
+.dashboard-view .summary-card .cal-display { margin-bottom:0; }
+.dashboard-view .dashboard-progress-card { margin-top:.1rem; }
+.daily-target-card { padding:.8rem .85rem; }
+.daily-target-card .card-header { margin-bottom:.55rem; }
+.daily-target-card .card-header h3 { font-size:.94rem; }
+.daily-target-flow { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:5px; }
+.daily-target-step { min-width:0; padding:7px 5px; border-radius:11px; background:rgba(15,23,42,.035); text-align:center; }
+.daily-target-step small { display:block; color:var(--text-muted); font-size:.57rem; line-height:1.15; min-height:2.3em; }
+.daily-target-step strong { display:block; margin-top:2px; font-size:.82rem; line-height:1.1; white-space:nowrap; }
+.daily-target-step.result { background:rgba(14,165,233,.10); }
+.daily-target-step.result strong { color:var(--primary); }
+.daily-target-op { color:var(--text-muted); font-weight:800; font-size:.82rem; }
+.formula-caption { margin:.48rem 0 .15rem !important; text-align:center; font-size:.68rem !important; line-height:1.35 !important; color:var(--text-muted); }
+.formula-origin { margin:.15rem 0 0 !important; text-align:center; font-size:.61rem !important; line-height:1.35 !important; color:var(--text-muted); }
+html[data-theme="dark"] .daily-target-step { background:rgba(148,163,184,.08); }
+html[data-theme="dark"] .daily-target-step.result { background:rgba(14,165,233,.13); }
+@media(max-width:430px){
+  .dashboard-view .top-header .user-info p { font-size:.72rem; }
+  .dashboard-coach-link { width:37px; height:37px; flex-basis:37px; border-radius:12px; }
+  .dashboard-coach-link .material-symbols-rounded { font-size:20px; }
+  .daily-target-flow { gap:3px; }
+  .daily-target-step { padding:6px 3px; border-radius:9px; }
+  .daily-target-step small { font-size:.53rem; }
+  .daily-target-step strong { font-size:.72rem; }
+  .daily-target-op { font-size:.72rem; }
+}
+@media(max-width:360px){
+  .dashboard-view .top-header .user-info p { font-size:.68rem; }
+  .daily-target-step small { font-size:.49rem; }
+  .daily-target-step strong { font-size:.67rem; }
+}
+
+
+/* V10.2.1 — Energy Balance ring spacing + single AI Coach entry point */
+.summary-card .cal-circle {
+    gap: 5px;
+}
+.summary-card .cal-circle .main-val {
+    line-height: 1.05;
+}
+.summary-card .cal-circle small {
+    margin-top: 2px;
+    line-height: 1.25;
+    max-width: 88px;
+}
+@media(max-width:430px){
+    .summary-card .cal-circle { gap: 4px; }
+    .summary-card .cal-circle small { margin-top: 2px; line-height: 1.2; }
+}
+
+
+/* V10.2.2 — final AI Coach placement + smaller Energy Balance status */
+.dashboard-coach-link { display:none !important; }
+.summary-card .cal-circle { gap: 7px; }
+.summary-card .cal-circle small {
+    font-size: .68rem !important;
+    line-height: 1.08 !important;
+    font-weight: 600;
+    margin-top: 0 !important;
+    max-width: 76px;
+}
+@media(max-width:430px){
+    .summary-card .cal-circle { gap: 6px; }
+    .summary-card .cal-circle small { font-size: .62rem !important; line-height: 1.05 !important; max-width: 72px; }
+    .coach-fab { width:46px !important; height:46px !important; right:14px !important; bottom:calc(72px + env(safe-area-inset-bottom, 0px)) !important; }
+}

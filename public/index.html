@@ -27,11 +27,6 @@
             <!-- Views will be dynamically injected here -->
         </main>
 
-        <!-- AI Coach quick access -->
-        <a href="#coach" class="coach-fab" id="coach-fab" aria-label="Buka AI Coach" title="AI Coach">
-            <span class="material-symbols-rounded">chat</span><span class="coach-fab-badge">AI</span>
-        </a>
-
         <!-- Bottom Navigation -->
         
 <template id="tpl-settings">
@@ -165,6 +160,9 @@
         </div>
     </template>
 
+<a href="#coach" id="coach-fab" class="coach-fab" aria-label="Buka AI Coach" title="AI Coach">
+    <span class="material-symbols-rounded">chat</span><span class="coach-fab-badge">AI</span>
+</a>
 <nav class="bottom-nav" id="bottom-nav" style="display: none;">
             <a href="#dashboard" class="nav-item active" data-target="dashboard"><span class="material-symbols-rounded">dashboard</span><span>Beranda</span></a>
             <a href="#food" class="nav-item" data-target="food"><span class="material-symbols-rounded">restaurant_menu</span><span>Makanan</span></a>
@@ -239,7 +237,7 @@
             <header class="top-header dashboard-header">
                 <div class="user-info">
                     <h2>Halo, <span id="dash-name">Pengguna</span></h2>
-                    <p id="dash-story-subtitle">Mari lihat cerita keseimbanganmu hari ini.</p>
+                    <p id="dash-story-subtitle">Lihat keseimbanganmu hari ini.</p>
                 </div>
                 <div class="health-score balance-ring-wrap">
                     <svg viewBox="0 0 36 36" class="circular-chart green balance-ring">
@@ -295,36 +293,7 @@
                     </div>
                     <div class="energy-net-label"><span>⚖️ Energi bersih</span><strong id="energy-net-value">0 kkal net</strong></div>
                 </div>
-                
-                <div class="macros mt-4">
-                    <div class="macro-item">
-                        <span>Protein</span>
-                        <div class="progress-bar"><div id="bar-p" class="fill bg-blue" style="width: 0%"></div></div>
-                        <small id="txt-p">0g</small>
-                    </div>
-                    <div class="macro-item">
-                        <span>Karbo</span>
-                        <div class="progress-bar"><div id="bar-c" class="fill bg-green" style="width: 0%"></div></div>
-                        <small id="txt-c">0g</small>
-                    </div>
-                    <div class="macro-item">
-                        <span>Lemak</span>
-                        <div class="progress-bar"><div id="bar-f" class="fill bg-orange" style="width: 0%"></div></div>
-                        <small id="txt-f">0g</small>
-                    </div>
-                </div>
             </section>
-
-            <section class="card dashboard-mini-stats glass-card">
-                <div class="dashboard-mini-grid">
-                    <div><small>Berat saat ini</small><strong id="dash-w-current">-</strong></div>
-                    <div><small>Target berat</small><strong id="dash-w-target">-</strong></div>
-                    <div><small>Kebutuhan energi</small><strong id="dash-tdee">-</strong></div>
-                    <div><small>Target harian</small><strong id="dash-target-cal">-</strong></div>
-                </div>
-            </section>
-
-
 
             <section class="card dashboard-progress-card glass-card">
                 <div class="card-header"><span class="material-symbols-rounded">monitoring</span><h3>Progress 7 Hari</h3></div>
@@ -339,9 +308,25 @@
             </section>
 
             <section class="card daily-target-card glass-card">
-                <div class="card-header"><span class="material-symbols-rounded">calculate</span><h3>Rumus Target Harian</h3></div>
-                <div class="daily-target-equation"><strong id="formula-tdee">TDEE</strong><span>−</span><strong id="formula-deficit">Defisit</strong><span>=</span><strong id="formula-target">Target kkal</strong></div><div class="formula-meaning"><span><b>A</b> = kebutuhan energi harian</span><span><b>B</b> = pengurangan sesuai tujuan</span><span><b>C</b> = target kalori harian</span></div>
-                <p id="formula-caption">Contoh: TDEE 2.000 − defisit 500 = target 1.500 kkal/hari.</p>
+                <div class="card-header"><span class="material-symbols-rounded">calculate</span><h3>Bagaimana Targetmu Dihitung?</h3></div>
+                <div class="daily-target-flow" aria-label="Cara menghitung target makan harian">
+                    <div class="daily-target-step">
+                        <small>Kebutuhan energi</small>
+                        <strong id="formula-tdee">TDEE</strong>
+                    </div>
+                    <span class="daily-target-op">−</span>
+                    <div class="daily-target-step">
+                        <small>Defisit untuk tujuanmu</small>
+                        <strong id="formula-deficit">Defisit</strong>
+                    </div>
+                    <span class="daily-target-op">=</span>
+                    <div class="daily-target-step result">
+                        <small>Target makan harian</small>
+                        <strong id="formula-target">Target kkal</strong>
+                    </div>
+                </div>
+                <p id="formula-caption" class="formula-caption">TDEE − defisit = target makan harian.</p>
+                <p id="formula-origin" class="formula-origin">💡 Defisit digunakan sebagai asumsi awal sesuai tujuanmu; perubahan nyata dapat berbeda.</p>
             </section>
         </div>
     </template>
