@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-life-balance-v10.2.3';
+const CACHE_NAME = 'ai-life-balance-v10.2.6';
 const urlsToCache = ['./','./index.html','./style.css','./app.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)).then(() => self.skipWaiting()));
