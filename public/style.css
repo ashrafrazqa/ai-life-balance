@@ -1669,3 +1669,34 @@ html[data-theme="dark"] .daily-target-step.result { background:rgba(14,165,233,.
     .summary-card .cal-circle small { font-size: .62rem !important; line-height: 1.05 !important; max-width: 72px; }
     .coach-fab { width:46px !important; height:46px !important; right:14px !important; bottom:calc(72px + env(safe-area-inset-bottom, 0px)) !important; }
 }
+
+
+/* V10.2.5 — dashboard refinement: restore compact macros, clearer activity ratio, floating Coach spacing */
+.dashboard-macro-strip{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:7px;
+    margin:.48rem 0 .05rem;
+    padding:.42rem .48rem;
+    border-top:1px solid var(--border);
+}
+.dashboard-macro-item{min-width:0;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 5px;font-size:.62rem;color:var(--text-muted)}
+.dashboard-macro-item strong{font-size:.65rem;color:var(--text-main);white-space:nowrap}
+.dashboard-macro-bar{grid-column:1/-1;height:4px;background:var(--border);border-radius:999px;overflow:hidden}
+.dashboard-macro-bar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#10b981);transition:width .4s ease}
+.dashboard-progress-card .progress-chart{height:68px}
+.dashboard-story-card{padding:.58rem .78rem;margin-bottom:.5rem}
+.dashboard-story-card p{font-size:.72rem;line-height:1.3;margin:.1rem 0 .25rem}
+.dashboard-story-card .card-header h3{font-size:.86rem}
+.dashboard-story-card .card-header .material-symbols-rounded{font-size:18px}
+.story-more-link{font-size:.72rem}
+/* The Coach remains a floating action, with a visible gap above bottom navigation. */
+.coach-fab{bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
+@media(max-width:640px){
+    .coach-fab{bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
+    .dashboard-macro-strip{gap:5px;padding:.36rem .42rem;margin-top:.35rem}
+    .dashboard-macro-item{font-size:.58rem}
+    .dashboard-macro-item strong{font-size:.61rem}
+    .dashboard-macro-bar{height:3px}
+    .dashboard-progress-card .progress-chart{height:62px}
+}

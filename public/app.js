@@ -1218,7 +1218,7 @@ async function initDashboard() {
         outFill.style.width=`${Math.min(100,(summary.calOut/visualMax)*100)}%`;
         outFill.classList.remove('over-target-fill');
     }
-    set('energy-out-ratio',summary.calOut>0?'tercatat':'—');
+    set('energy-out-ratio',summary.calOut>0?`${Math.round((summary.calOut/Math.max(1,target))*100)}%`:'—');
     const outRatio=document.getElementById('energy-out-ratio');
     if(outRatio) outRatio.classList.remove('over-target-ratio');
 
