@@ -1,4 +1,4 @@
-// AI Life Balance Master Update — V14.3
+// AI Life Balance — V10.2.7 AI Performance Update
 const GEMINI_MODEL = "gemini-3.6-flash";
 const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
 
@@ -17,7 +17,8 @@ function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Expose-Headers": "Server-Timing, X-AI-Latency-Ms"
   };
 }
 
@@ -94,17 +95,36 @@ function getFriendlyError(status, originalMessage = "") {
 /**
  * Memanggil Gemini.
  */
+function optimizeGeminiPayload(payload) {
+  const optimized = structuredClone(payload);
+  optimized.generationConfig = { ...(optimized.generationConfig || {}) };
+
+  // Gemini 3.x defaults to dynamic thinking. For this app most requests
+  // are simple extraction/chat tasks, so use minimal thinking to reduce latency.
+  // Image analysis and conversational/system-instruction requests get low
+  // thinking to preserve a little more reasoning quality.
+  if (!optimized.generationConfig.thinkingConfig) {
+    const hasImage = JSON.stringify(optimized.contents || []).includes('inlineData');
+    const isConversation = Boolean(optimized.systemInstruction);
+    const thinkingLevel = (hasImage || isConversation) ? 'low' : 'minimal';
+    optimized.generationConfig.thinkingConfig = { thinkingLevel };
+  }
+
+  return optimized;
+}
+
 async function callGemini(apiKey, payload) {
   const geminiUrl =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+  const optimizedPayload = optimizeGeminiPayload(payload);
   return fetch(geminiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(optimizedPayload)
   });
 }
 
@@ -233,10 +253,12 @@ export default {
         const apiKey = apiKeys[i];
 
         try {
+          const geminiStartedAt = Date.now();
           const upstream = await callGemini(
             apiKey,
             payload
           );
+          const geminiElapsedMs = Date.now() - geminiStartedAt;
 
           const text = await upstream.text();
 

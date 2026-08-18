@@ -231,30 +231,7 @@ function stopCamera() {
 
 // AI service: the Gemini API Key is kept server-side.
 // Production endpoint: Cloudflare Worker at /api/gemini.
-const AI_API_ENDPOINT = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'https://ai-life-balance-test.dny-setia.workers.dev/api/gemini' : '/api/gemini';
-
-async function callGeminiAPI(payload) {
-    let response, result;
-    const startedAt = performance.now();
-    try {
-        response = await fetch(AI_API_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-    } catch (e) {
-        throw new Error(`Tidak dapat terhubung ke layanan AI. Periksa koneksi internet. Detail: ${e.message}`);
-    }
-    try {
-        result = await response.json();
-    } catch {
-        throw new Error(`Layanan AI mengembalikan respons tidak valid (HTTP ${response.status}).`);
-    }
-    if (!response.ok) throw new Error(result?.error || `Layanan AI gagal (HTTP ${response.status}).`);
-    const elapsed = Math.round(performance.now() - startedAt);
-    if (elapsed > 2500) console.info(`AI response time: ${elapsed} ms`);
-    return result;
-}
+// AI service: Gemini API key remains server-side in the Cloudflare Worker.
 
 function navigate(hash) {
     if (!hash || hash === '') hash = '#dashboard';
@@ -1059,6 +1036,7 @@ const AI_API_ENDPOINT_MASTER = (window.AI_API_ENDPOINT ||
     ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? MASTER_LOCAL_WORKER : '/api/gemini'));
 
 async function callGeminiAPI(payload) {
+    const startedAt = performance.now();
     let response;
     try {
         response = await fetch(AI_API_ENDPOINT_MASTER, {
@@ -1073,6 +1051,9 @@ async function callGeminiAPI(payload) {
     try { result = await response.json(); }
     catch { throw new Error(`Layanan AI mengembalikan respons tidak valid (HTTP ${response.status}).`); }
     if (!response.ok) throw new Error(result?.error || `Layanan AI gagal (HTTP ${response.status}).`);
+    const elapsed = Math.round(performance.now() - startedAt);
+    const serverLatency = response.headers.get('X-AI-Latency-Ms');
+    console.info(`[AI Performance] total=${elapsed}ms gemini=${serverLatency || 'n/a'}ms`);
     return result;
 }
 
